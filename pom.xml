@@ -1,0 +1,45 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.einwesen.heimklangwelle</groupId>
+  <artifactId>heimklang-station</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>de.einwesen.heimklangwelle</name>
+  <url>https://github.com/EinWesen</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+<dependencies>
+    <!-- Core jUPnP library (3.x line) -->
+    <dependency>
+        <groupId>org.jupnp</groupId>
+        <artifactId>org.jupnp</artifactId>
+        <version>3.0.3</version> <!-- or the latest 3.x -->
+    </dependency>
+
+    <!-- Optional: jUPnP support library (helpers, common UPnP types) -->
+    <dependency>
+        <groupId>org.jupnp</groupId>
+        <artifactId>org.jupnp.support</artifactId>
+        <version>3.0.3</version> <!-- match the core version if available -->
+    </dependency>
+     
+	<dependency>
+	  <groupId>org.eclipse.jetty</groupId>
+	  <artifactId>jetty-servlet</artifactId>
+	  <version>9.4.0.v20161208</version>
+	</dependency>
+
+	<dependency>
+	    <groupId>org.eclipse.jetty</groupId>
+	    <artifactId>jetty-client</artifactId>
+	    <version>9.4.0.v20161208</version>
+	</dependency>
+    
+</dependencies>
+</project>

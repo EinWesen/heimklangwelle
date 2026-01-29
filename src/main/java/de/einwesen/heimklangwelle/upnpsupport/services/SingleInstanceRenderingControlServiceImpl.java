@@ -1,0 +1,78 @@
+package de.einwesen.heimklangwelle.upnpsupport.services;
+
+import org.jupnp.model.types.UnsignedIntegerFourBytes;
+import org.jupnp.model.types.UnsignedIntegerTwoBytes;
+import org.jupnp.support.model.Channel;
+import org.jupnp.support.renderingcontrol.AbstractAudioRenderingControl;
+import org.jupnp.support.renderingcontrol.RenderingControlErrorCode;
+import org.jupnp.support.renderingcontrol.RenderingControlException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import de.einwesen.heimklangwelle.HeimklangStation;
+import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
+
+//UPNP annotations are inherited from parent
+public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRenderingControl {
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(SingleInstanceRenderingControlServiceImpl.class);
+	
+	private final AbstractRendererWrapper rendererInstance;
+	private final UnsignedIntegerFourBytes[] instanceIds;
+	
+	public SingleInstanceRenderingControlServiceImpl() {
+		super();
+		this.rendererInstance = HeimklangStation.getCurrentRendererInstance();
+		this.instanceIds = new UnsignedIntegerFourBytes[] {this.rendererInstance.getInstanceId()};
+	}
+	
+	private Channel validateInstanceChannel(UnsignedIntegerFourBytes instanceId, String channelName) throws RenderingControlException {
+		if (instanceId.equals(instanceIds[0])) {
+			return Channel.valueOf(channelName);					
+		} else {
+			throw new RenderingControlException(RenderingControlErrorCode.INVALID_INSTANCE_ID);			
+		}
+	}
+	
+	private void firePlayerVolumneChangedEvent(UnsignedIntegerFourBytes instanceId) {
+		try {
+			this.appendCurrentState(getLastChange(), instanceId);			
+		} catch (Throwable t) {
+			LOGGER.warn("Updating lastChanges failed", t);
+		}
+	}
+	
+	@Override
+	public UnsignedIntegerFourBytes[] getCurrentInstanceIds() {
+		return instanceIds;
+	}
+
+
+	@Override
+	public boolean getMute(UnsignedIntegerFourBytes instanceId, String channelName) throws RenderingControlException {				
+		return this.rendererInstance.isMute(validateInstanceChannel(instanceId, channelName));
+	}
+
+	@Override
+	public void setMute(UnsignedIntegerFourBytes instanceId, String channelName, boolean desiredMute) throws RenderingControlException {
+		this.rendererInstance.setMute(validateInstanceChannel(instanceId, channelName), desiredMute);
+		firePlayerVolumneChangedEvent(instanceId);
+	}
+
+	@Override
+	public UnsignedIntegerTwoBytes getVolume(UnsignedIntegerFourBytes instanceId, String channelName) throws RenderingControlException {
+		return new UnsignedIntegerTwoBytes(this.rendererInstance.getVolume(validateInstanceChannel(instanceId, channelName)));
+	}
+
+	@Override
+	public void setVolume(UnsignedIntegerFourBytes instanceId, String channelName, UnsignedIntegerTwoBytes desiredVolume) throws RenderingControlException {
+		this.rendererInstance.setVolume(validateInstanceChannel(instanceId, channelName), desiredVolume.getValue());
+		firePlayerVolumneChangedEvent(instanceId);
+	}
+
+	@Override
+	protected Channel[] getCurrentChannels() {
+		return this.rendererInstance.getCurrentChannels();
+	}
+    
+}
