@@ -7,5 +7,9 @@ public interface RendererChangeEventListener {
 	default void firePlayerStateChangedEvent(UnsignedIntegerFourBytes instanceId) {
 		// Do nothing
 	}
+
+	default void firePlayerVolumneChangedEvent(UnsignedIntegerFourBytes instanceId) {
+		// Do nothing
+	}
 	
 }

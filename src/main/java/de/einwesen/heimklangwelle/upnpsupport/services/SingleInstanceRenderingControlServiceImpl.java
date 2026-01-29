@@ -11,9 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangStation;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
+import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 
 //UPNP annotations are inherited from parent
-public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRenderingControl {
+public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRenderingControl implements RendererChangeEventListener {
 	
 	private final Logger LOGGER = LoggerFactory.getLogger(SingleInstanceRenderingControlServiceImpl.class);
 	
@@ -22,7 +23,7 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 	
 	public SingleInstanceRenderingControlServiceImpl() {
 		super();
-		this.rendererInstance = HeimklangStation.getCurrentRendererInstance();
+		this.rendererInstance = HeimklangStation.getCurrentRendererInstance(this);
 		this.instanceIds = new UnsignedIntegerFourBytes[] {this.rendererInstance.getInstanceId()};
 	}
 	
@@ -34,7 +35,7 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 		}
 	}
 	
-	private void firePlayerVolumneChangedEvent(UnsignedIntegerFourBytes instanceId) {
+	public void firePlayerVolumneChangedEvent(UnsignedIntegerFourBytes instanceId) {
 		try {
 			this.appendCurrentState(getLastChange(), instanceId);			
 		} catch (Throwable t) {

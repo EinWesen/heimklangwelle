@@ -28,10 +28,20 @@ public abstract class AbstractRendererWrapper {
 	}
 	
 	protected void firePlayerStateChangedEvent() {
-		for (RendererChangeEventListener l : this.changeListeners) {
-			l.firePlayerStateChangedEvent(this.instanceId);
+		synchronized (changeListeners) {
+			for (RendererChangeEventListener l : this.changeListeners) {
+				l.firePlayerStateChangedEvent(this.instanceId);
+			}			
 		}
 	}
+	
+	protected void firePlayerVolumneChangedEvent() {
+		synchronized (changeListeners) {
+			for (RendererChangeEventListener l : this.changeListeners) {
+				l.firePlayerVolumneChangedEvent(this.instanceId);
+			}			
+		}
+	}	
 	
 	public UnsignedIntegerFourBytes getInstanceId() {
 		return instanceId;
