@@ -25,12 +25,14 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	public void setMute(Channel channel, boolean desiredMute) throws RenderingControlException {
 		System.out.println("SetMute: " +  channel.name() + " " + String.valueOf(desiredMute));
 		this.isMute = desiredMute;
+		firePlayerVolumneChangedEvent();
 	}
 
 	@Override
 	public void setVolume(Channel channel, long desiredVolume) throws RenderingControlException {
 		System.out.println("SetVol: " +  channel.name() + " " + String.valueOf(desiredVolume));
 		this.volume = desiredVolume;
+		firePlayerVolumneChangedEvent();
 	}
 
 	@Override
@@ -41,8 +43,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
 		System.out.println("loadCurrentContent: " +  getCurrentURI());
-		this.playerState = TransportState.STOPPED;
-		firePlayerStateChangedEvent();
+		setPlayerStateAndFire(TransportState.STOPPED);
 	}
 
 	@Override
@@ -63,10 +64,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	public void play() throws AVTransportException {
 		if (getCurrentURI() != null) {
 			System.out.println("play!");
-			if (this.playerState != TransportState.PLAYING) {
-				this.playerState = TransportState.PLAYING;
-				firePlayerStateChangedEvent();						
-			}
+			setPlayerStateAndFire(TransportState.PLAYING);
 		} else {
 			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
 		}
@@ -76,10 +74,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	public void stop() throws AVTransportException {
 		System.out.println("stop!");
 		if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
-				if (this.playerState != TransportState.STOPPED) {
-					this.playerState = TransportState.STOPPED;
-					firePlayerStateChangedEvent();
-				}
+			setPlayerStateAndFire(TransportState.STOPPED);	
 		} else {
 			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
 		}		
@@ -89,12 +84,10 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	public void pause() throws AVTransportException {
 		if (this.playerState == TransportState.PLAYING) {
 			System.out.println("pause!");
-			this.playerState = TransportState.PAUSED_PLAYBACK;
-			firePlayerStateChangedEvent();
+			setPlayerStateAndFire(TransportState.PAUSED_PLAYBACK);
 		} else if (this.playerState != TransportState.PAUSED_PLAYBACK) {
 			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
-		}
-		
+		}		
 	}
 
 	@Override
@@ -111,4 +104,9 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 		}
 	}
 
+	@Override
+	public long getCurrentTrackPosition() throws AVTransportException {
+		return -1;
+	}
+	
 }

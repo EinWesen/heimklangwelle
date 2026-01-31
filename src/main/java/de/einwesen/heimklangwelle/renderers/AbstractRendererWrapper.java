@@ -9,18 +9,22 @@ import org.jupnp.support.model.TransportAction;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.model.TransportStatus;
 import org.jupnp.support.renderingcontrol.RenderingControlException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 
 public abstract class AbstractRendererWrapper {
+	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRendererWrapper.class);
 	
 	protected UnsignedIntegerFourBytes instanceId = new UnsignedIntegerFourBytes(0);
 	protected Channel[] channels = new Channel[]{Channel.Master};
-	protected TransportState playerState = TransportState.NO_MEDIA_PRESENT;
-	protected TransportStatus errorState = TransportStatus.OK;
 	
-	protected String currentURI = ""; 
-	protected String currentURIMetaData = "";
+	protected volatile TransportState playerState = TransportState.NO_MEDIA_PRESENT;
+	protected volatile TransportStatus errorState = TransportStatus.OK;
+	
+	protected volatile String currentURI = ""; 
+	protected volatile String currentURIMetaData = "";
 	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>(); 
 	
 	public boolean addListener(RendererChangeEventListener e) {
@@ -29,14 +33,24 @@ public abstract class AbstractRendererWrapper {
 	
 	protected void firePlayerStateChangedEvent() {
 		synchronized (changeListeners) {
+			LOGGER.debug("fire!");
 			for (RendererChangeEventListener l : this.changeListeners) {
 				l.firePlayerStateChangedEvent(this.instanceId);
 			}			
 		}
 	}
 	
+    protected void setPlayerStateAndFire(TransportState state) {
+    	if (this.playerState != state) {
+    		LOGGER.debug("fire!:" + state);
+    		this.playerState = state;
+    		this.firePlayerStateChangedEvent();
+    	}
+    }	
+	
 	protected void firePlayerVolumneChangedEvent() {
 		synchronized (changeListeners) {
+			LOGGER.debug("fire!");
 			for (RendererChangeEventListener l : this.changeListeners) {
 				l.firePlayerVolumneChangedEvent(this.instanceId);
 			}			
@@ -60,8 +74,7 @@ public abstract class AbstractRendererWrapper {
 	}
 	
 	public TransportAction[] getCurrentAllowedPlayerOperations() throws Exception {
-		//TODO: Needs to check for loaded tracks and such
-		
+		//FIXME: Next & Previous depends on Playlist position
 		switch (this.playerState) {
 			case PAUSED_PLAYBACK:
 				if (this.getPlaylistSize()>1) {
@@ -71,13 +84,17 @@ public abstract class AbstractRendererWrapper {
 				}
 			
 			case PLAYING:
-				return new TransportAction[] {TransportAction.Pause, TransportAction.Next, TransportAction.Previous, /* TransportAction.Seek */};
+				if (this.getPlaylistSize()>1) {
+					return new TransportAction[] {TransportAction.Pause, TransportAction.Stop, TransportAction.Next, TransportAction.Previous, /* TransportAction.Seek */};
+				} else {
+					return new TransportAction[] {TransportAction.Pause, TransportAction.Stop};
+				}
 			
 			case STOPPED:
 				if (this.getPlaylistSize()>1) {
 					return new TransportAction[] {TransportAction.Play, TransportAction.Next, TransportAction.Previous};
 				} else {
-					return new TransportAction[] {TransportAction.Play, TransportAction.Next, TransportAction.Previous};
+					return new TransportAction[] {TransportAction.Play};
 				}
 						
 			case TRANSITIONING:
@@ -121,6 +138,10 @@ public abstract class AbstractRendererWrapper {
 	public String getDescription() {
 		return this.getClass().getName();
 	}
+	
+	public void shutdown() {
+		// Overwrite if needed
+	}
 
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;
 	public abstract void setMute(Channel channel, boolean desiredMute)  throws RenderingControlException;
@@ -136,4 +157,7 @@ public abstract class AbstractRendererWrapper {
 	public abstract void pause() throws AVTransportException;
 	public abstract long getPlaylistSize() throws AVTransportException;
 	public abstract long getCurrentTrack() throws AVTransportException;
+	public abstract long getCurrentTrackPosition() throws AVTransportException;
+	
+	
 }
