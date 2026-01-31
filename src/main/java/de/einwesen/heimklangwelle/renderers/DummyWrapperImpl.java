@@ -14,6 +14,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	public DummyWrapperImpl() {
 		super();
 		System.out.println("new Dummy Impl");
+		this.ready = true;
 	}
 
 	@Override

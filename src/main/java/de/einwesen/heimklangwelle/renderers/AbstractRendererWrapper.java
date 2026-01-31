@@ -25,6 +25,8 @@ public abstract class AbstractRendererWrapper {
 	
 	protected volatile String currentURI = ""; 
 	protected volatile String currentURIMetaData = "";
+	protected volatile boolean ready = false;
+	
 	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>(); 
 	
 	public boolean addListener(RendererChangeEventListener e) {
@@ -139,6 +141,10 @@ public abstract class AbstractRendererWrapper {
 		return this.getClass().getName();
 	}
 	
+	public boolean isReady() {
+		return ready;
+	}
+
 	public void shutdown() {
 		// Overwrite if needed
 	}
@@ -148,7 +154,6 @@ public abstract class AbstractRendererWrapper {
 	public abstract void setVolume(Channel channel, long desiredVolume) throws RenderingControlException;
 	public abstract long getVolume(Channel channel) throws RenderingControlException;
 
-	//throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET)
 	public abstract void loadCurrentContent() throws AVTransportException;
 	public abstract void nextTrack() throws AVTransportException;
 	public abstract void previousTrack() throws AVTransportException;
