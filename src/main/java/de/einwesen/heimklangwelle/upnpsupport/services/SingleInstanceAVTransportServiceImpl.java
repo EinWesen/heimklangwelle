@@ -122,7 +122,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 		“TAPE-INDEX” ui4
 		“REL_TAPE-INDEX” i4
 		“FRAME” ui4
-		“REL_FRAME” i4        
+		“REL_FRAME” i4   
 		 */        
 		
 	}	
@@ -313,7 +313,8 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	     *  If relative time-based position information is not supported, this will 
 	     *  be set to "NOT_IMPLEMENTED".
 	     */
-	    final String relTime = "NOT_IMPLEMENTED";
+	    final long trackPos = this.backendInstance.getCurrentTrackPosition();
+	    final String relTime = trackPos < 0 ? "NOT_IMPLEMENTED" : formatSeconds(this.backendInstance.getCurrentTrackPosition());
 	    
 	    /*
 	     * The current absolute time position within the media, measured from the beginning.
@@ -374,16 +375,13 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	public TransportSettings getTransportSettings(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
 		return new TransportSettings(PlayMode.NORMAL);
-	}
-	
-
+	}	
 	
 	@Override
 	protected TransportAction[] getCurrentTransportActions(UnsignedIntegerFourBytes instanceId) throws Exception {
 		validateInstanceId(instanceId);
 		return this.backendInstance.getCurrentAllowedPlayerOperations();
-	}
-	
+	}	
 	
 	@Override
 	public UnsignedIntegerFourBytes[] getCurrentInstanceIds() {
@@ -393,6 +391,17 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	@Override
 	public DeviceCapabilities getDeviceCapabilities(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		return SUPPORTED_CAPABILITIES;
+	}
+	
+	private static String formatSeconds(long totalSeconds) {
+	    if (totalSeconds <= 0) {
+	    	return "00:00:00";
+	    } else {
+	    	long hours = totalSeconds / 3600;
+	    	long minutes = (totalSeconds % 3600) / 60;
+	    	long seconds = totalSeconds % 60;
+	    	return "%02d:%02d:%02d".formatted(hours, minutes, seconds);	    	
+	    }
 	}
 	
 }
