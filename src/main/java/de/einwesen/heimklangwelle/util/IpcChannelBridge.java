@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 public class IpcChannelBridge implements AutoCloseable {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(IpcChannelBridge.class);	
+	private static final String STOP_QUEUE_MARKER = "\0";
 	
 	private final ExecutorService ioExecutor = Executors.newFixedThreadPool(3);
 	private final ExecutorService consumerExecutor = Executors.newSingleThreadExecutor();
@@ -38,6 +39,7 @@ public class IpcChannelBridge implements AutoCloseable {
 	private final AsynchronousFileChannel namedPipeChannel;
 	
 	private volatile boolean shouldBeRunning = true;
+	private volatile boolean expectDisconnect = false;
 	private volatile boolean readerRunning = true;
 	private volatile boolean writerRunning = true;
 	
@@ -79,7 +81,9 @@ public class IpcChannelBridge implements AutoCloseable {
 					readingBuffer.clear();
 
 					// Schedule next read
-					self.read(readingBuffer, 0, null, this);
+					if (shouldBeRunning) {
+						self.read(readingBuffer, 0, null, this);						
+					}
 				} else {
 					this.failed(new IOException("channel closed?"), attachment);
 				}
@@ -88,23 +92,28 @@ public class IpcChannelBridge implements AutoCloseable {
 
 			@Override
 			public void failed(Throwable exc, Void attachment) {
-				if (shouldBeRunning) { // means, it's not duie to closing
-					LOGGER.warn("read failed", exc);
-					final int tex = errorCounter.incrementAndGet();
-					if (errorConsumer != null) {
-						final String msg = "R:" + String.valueOf(tex);
-						consumerExecutor.submit(() -> errorConsumer.accept(new ExecutionException(msg, exc)));
-					}
-
-					if (tex < 10) {
-						try {
-							Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-						} catch (InterruptedException e1) {
-						}
-						self.read(readingBuffer, 0, null, this);
-					} else {
+				if (shouldBeRunning) { // means, it's not due to requested closing
+					if (expectDisconnect) {
+						LOGGER.debug("Writer finished, after expectatation of remote close");
 						readerRunning = false;
-						LOGGER.error("Reader finished due to errors");
+					} else {						
+						LOGGER.warn("read failed", exc);
+						final int tex = errorCounter.incrementAndGet();
+						if (errorConsumer != null) {
+							final String msg = "R:" + String.valueOf(tex);
+							consumerExecutor.submit(() -> errorConsumer.accept(new ExecutionException(msg, exc)));
+						}
+						
+						if (tex < 10) {
+							try {
+								Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+							} catch (InterruptedException e1) {
+							}
+							self.read(readingBuffer, 0, null, this);
+						} else {
+							readerRunning = false;
+							LOGGER.error("Reader finished due to errors");
+						}
 					}
 				}
 			}
@@ -119,29 +128,37 @@ public class IpcChannelBridge implements AutoCloseable {
         while (shouldBeRunning && writerRunning) {
         	try {
 				try {
-					String msg = this.sinkQueue.take();
-					
-					writeToChannel(msg, this.namedPipeChannel);
+					String msg = this.sinkQueue.take();	
+					if (msg != STOP_QUEUE_MARKER) { // getting that specific string object marks the end
+						writeToChannel(msg, this.namedPipeChannel);												
+					}
 				} catch (InterruptedException e) {
-					LOGGER.warn("waiting on queue interrupted ", e);
+					if (shouldBeRunning) {
+						LOGGER.warn("waiting on queue interrupted ", e);						
+					}
 					throw e;
 				} catch (ExecutionException e) {
 					LOGGER.warn("writing failed ", e);
 					throw e;
 				}
 			} catch (Throwable e) {
-        		if (shouldBeRunning) { // means, it's not duie to closing
-        			errorCounter += 1;
-        			if (errorConsumer != null) {
-        				final String msg = "W:"+String.valueOf(errorCounter);
-        				consumerExecutor.submit(() -> errorConsumer.accept(new ExecutionException(msg, e)));
-        			}
-        			if (errorCounter < 10) {
-        				try { Thread.sleep(TimeUnit.SECONDS.toMillis(1)); } catch (InterruptedException e1) {}        				
-        			}else {
+        		if (shouldBeRunning) { // means, it's not due to requested closing
+        			if (this.expectDisconnect) {
+        				LOGGER.debug("Writer finished, after expectatation of remote close");
         				writerRunning = false;
-        				LOGGER.error("Writer finished due to errors");        	
-        			}        			
+        			} else {
+        				errorCounter += 1;
+        				if (errorConsumer != null) {
+        					final String msg = "W:"+String.valueOf(errorCounter);
+        					consumerExecutor.submit(() -> errorConsumer.accept(new ExecutionException(msg, e)));
+        				}
+        				if (errorCounter < 10) {
+        					try { Thread.sleep(TimeUnit.SECONDS.toMillis(1)); } catch (InterruptedException e1) {}        				
+        				}else {
+        					writerRunning = false;
+        					LOGGER.error("Writer finished due to errors");        	
+        				}        			        				
+        			}
         		}				
 			}        	
         }
@@ -192,10 +209,23 @@ public class IpcChannelBridge implements AutoCloseable {
     public void close() throws Exception {
     	this.shouldBeRunning = false;
     	
+    	this.sinkQueue.offer(STOP_QUEUE_MARKER); // unblock writer thread waiting on "take"
+    	
+    	while (!sinkQueue.isEmpty()) {
+    		Thread.sleep(50);
+    	}
+
+    	try {
+    		this.namedPipeChannel.close();
+    	} catch (IOException e) {
+    		LOGGER.warn("Filechannel could not be closed", e);
+    	}    	
+    	
     	this.ioExecutor.shutdown();
     	try {
 			if (!this.ioExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
 				LOGGER.trace("IOExecutor did not terminate in time");
+				this.ioExecutor.shutdownNow();
 			}
 		} catch (InterruptedException e) {
 			LOGGER.trace("IOExecutor interrupted during termination");
@@ -205,17 +235,16 @@ public class IpcChannelBridge implements AutoCloseable {
 			this.consumerExecutor.shutdown();
 			if (!this.consumerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
 				LOGGER.trace("ConsumerExecutor did not terminate in time");
+				this.consumerExecutor.shutdownNow();
 			}
 		} catch (InterruptedException e) {
 			LOGGER.trace("ConsumerExecutor interrupted during termination");
 		}
     	
-    	try {
-			this.namedPipeChannel.close();
-		} catch (IOException e) {
-			// ignore
-		}
-    	
+    }
+    
+    public void expectCloseByRemote() {
+    	this.expectDisconnect = true;
     }
     
     private static AsynchronousFileChannel openNamedPipeChannel(String pipname, ExecutorService usingExecutor) throws IOException {
