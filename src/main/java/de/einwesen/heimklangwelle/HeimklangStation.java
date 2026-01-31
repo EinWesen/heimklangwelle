@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
-import de.einwesen.heimklangwelle.renderers.DummyWrapperImpl;
+import de.einwesen.heimklangwelle.renderers.MPVRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.FilteredAnnotationLocalServiceBinderImpl;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.services.ConnectionManagerServiceImpl;
@@ -34,7 +34,7 @@ import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceAVTransport
 import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceRenderingControlServiceImpl;
 
 public class HeimklangStation implements RegistryListener {
-	private final Logger LOGGER = LoggerFactory.getLogger(HeimklangStation.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(HeimklangStation.class);
 	
 	private static HeimklangStation instance = null;
     
@@ -46,7 +46,7 @@ public class HeimklangStation implements RegistryListener {
     private HeimklangStation() throws ValidationException, IOException {
         if (instance == null) {
         	instance = this;
-        	this.rendererInstance = new DummyWrapperImpl();
+        	this.rendererInstance = new MPVRendererWrapper();
         	
         	LOGGER.info("Starting jUPnP...");            
             this.upnpService = new UpnpServiceImpl(new DefaultUpnpServiceConfiguration());
@@ -71,7 +71,7 @@ public class HeimklangStation implements RegistryListener {
                 new ModelDetails(
                         rendererInstance.getClass().getSimpleName(),
                         rendererInstance.getDescription(),
-                        "?" // FIXME: Version                        
+                        "?" // FIXME: commit version Version                        
                 )
         );
         
@@ -155,7 +155,8 @@ public class HeimklangStation implements RegistryListener {
     }
     
     public void shutdown() {
-        upnpService.shutdown();
+    	this.rendererInstance.shutdown();
+        this.upnpService.shutdown();
     }
     
 	public static AbstractRendererWrapper getCurrentRendererInstance() {
@@ -168,6 +169,23 @@ public class HeimklangStation implements RegistryListener {
 		}
 		return instance.rendererInstance;
 	}
+    
+	public static String getConfigProperty(final String name, final String defaultValue) {
+    	
+		String val = null;
+		
+		try { val = System.getProperty(name); } catch (Throwable ignore) {}
+		
+		if (val == null) {
+			try { val = System.getenv(name); } 	catch (Throwable ignore) {}			
+		}
+		
+		if (val != null && val.length()>0) {
+			return val;
+		}
+		
+    	return defaultValue;    	
+    }
 	
     public static void main(String[] args) throws Exception {
         instance = new HeimklangStation();

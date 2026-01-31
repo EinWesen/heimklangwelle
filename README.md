@@ -18,7 +18,8 @@ Is this best way to solve that problem? - Of course not! There are so many easie
     - [ ] Provide basic Webserver for Controlpoint WebUI
 - [ ] Mediarenderer
     - [x] Implement transport/controller service infrastruture
-    - [ ] Implement the actual renderer based on mplayer
+    - [x] Implement the actual renderer based on ~~mplayer~~ mpv
+    - [ ] Enhance the IPC class to work on linux ( = posix?)
 - [ ] Controlpoint
     - [ ] Implement backend to handle UPNP-communication with mediaservers
     - [ ] Implement WebPlayer UI
@@ -27,9 +28,9 @@ Is this best way to solve that problem? - Of course not! There are so many easie
     - [ ] Implement the actual contentsearch (on disk) and serving
 
 ## Acknowlegements
-This would not be possible without https://www.jupnp.org/ | https://github.com/jupnp/jupnp .
-
-Currently planned for the actual playback: https://mplayerhq.hu/
+This would not be possible without these: 
+- https://www.jupnp.org/ | https://github.com/jupnp/jupnp 
+- https://mpv.io/ | https://github.com/mpv-player/mpv
 
 ## Other good stuff
 The [Serviio](https://serviio.org) media server has worked really well for me in he past.
