@@ -16,10 +16,10 @@ Is this best way to solve that problem? - Of course not! There are so many easie
 - [ ] Basic infrastruture
     - [x] Implement UPNP Services/Discovery 
     - [ ] Provide basic Webserver for Controlpoint WebUI
-- [ ] Mediarenderer
+- [x] Mediarenderer
     - [x] Implement transport/controller service infrastruture
     - [x] Implement the actual renderer based on ~~mplayer~~ mpv
-    - [ ] Enhance the IPC class to work on linux ( = posix?)
+    - [x] Enhance the IPC class to work on linux ( = posix?)
 - [ ] Controlpoint
     - [ ] Implement backend to handle UPNP-communication with mediaservers
     - [ ] Implement WebPlayer UI

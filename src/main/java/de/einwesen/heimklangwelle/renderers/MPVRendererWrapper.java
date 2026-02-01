@@ -87,7 +87,8 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	}
 	
     private final String mpvPath;
-    private final String ipcPipePath; 
+    private final String ipcPipePath;
+    private final Class<? extends java.nio.channels.Channel> ipcType;
 
     private Process mpv;
     private IpcChannelBridge ipc;
@@ -105,8 +106,15 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     private Map<Integer, CompletableFuture<JSONObject>> waitingRequests = Collections.synchronizedMap(new HashMap<>(10)); 
     
     public MPVRendererWrapper() throws IOException {
-    	this.mpvPath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPV_PATH, "mpv");
-    	this.ipcPipePath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPVPIPE_PATH, "\\\\.\\pipe\\heimklang_mpvpipe") + "_" + Integer.toHexString(this.hashCode());
+    	if (HeimklangStation.isOnWindows()) {
+    		this.ipcType = java.nio.channels.AsynchronousFileChannel.class;
+    		this.ipcPipePath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPVPIPE_PATH, "\\\\.\\pipe\\heimklang_mpvpipe") + "_" + Integer.toHexString(this.hashCode());
+    		this.mpvPath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPV_PATH, "mpv.exe");
+    	} else {
+    		this.ipcType = java.nio.channels.SocketChannel.class;
+    		this.ipcPipePath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPVPIPE_PATH, "/tmp/heimklang_mpvpipe_" + Integer.toHexString(this.hashCode())+".sock");
+    		this.mpvPath = HeimklangStation.getConfigProperty(CONFIG_PROPERTY_MPV_PATH, "mpv");    		
+    	}
     	startMPV();
     }
 
@@ -118,9 +126,9 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
                 "--no-video",
                 "--quiet",
                 "--input-ipc-server=" + ipcPipePath
-        ).start();
+        ).start();        
 
-        ipc = new IpcChannelBridge(this.ipcPipePath, this::ipcConsumer, this::ipcError);
+        ipc = new IpcChannelBridge(this.ipcType, this.ipcPipePath, this::ipcConsumer, this::ipcError);
         
         for (ObservedProperty p : ObservedProperty.values()) {
         	if (p != ObservedProperty.UNKNOWN_PROPERTY) {

@@ -1,6 +1,7 @@
 package de.einwesen.heimklangwelle;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.jupnp.DefaultUpnpServiceConfiguration;
@@ -46,6 +47,8 @@ public class HeimklangStation implements RegistryListener {
     private HeimklangStation() throws ValidationException, IOException {
         if (instance == null) {
         	instance = this;
+        	
+        	LOGGER.info("Initializing renderer...");
         	this.rendererInstance = new MPVRendererWrapper();
         	
         	LOGGER.info("Starting jUPnP...");            
@@ -186,6 +189,10 @@ public class HeimklangStation implements RegistryListener {
 		
     	return defaultValue;    	
     }
+	
+	public static boolean isOnWindows() {
+		return System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
+	}
 	
     public static void main(String[] args) throws Exception {
         instance = new HeimklangStation();
