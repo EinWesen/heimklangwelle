@@ -1,0 +1,1 @@
+java -jar heimklang-station-tests.jar de.einwesen.heimklangwelle.test.manual.MpvBasics

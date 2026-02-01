@@ -1,0 +1,1 @@
+E:\Apps\eclipse\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.9.v20251105-0741\jre\bin\java -cp heimklang-station-tests.jar -jar heimklang-station-tests.jar
