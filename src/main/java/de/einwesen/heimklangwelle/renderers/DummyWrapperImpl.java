@@ -5,15 +5,19 @@ import org.jupnp.support.avtransport.AVTransportException;
 import org.jupnp.support.model.Channel;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.renderingcontrol.RenderingControlException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DummyWrapperImpl extends AbstractRendererWrapper {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRendererWrapper.class);
+	
 	private boolean isMute = false;
 	private long volume = 100;
 
 	public DummyWrapperImpl() {
 		super();
-		System.out.println("new Dummy Impl");
+		LOGGER.info("created");
 		this.ready = true;
 	}
 
@@ -24,14 +28,14 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void setMute(Channel channel, boolean desiredMute) throws RenderingControlException {
-		System.out.println("SetMute: " +  channel.name() + " " + String.valueOf(desiredMute));
+		LOGGER.info("SetMute: " +  channel.name() + " " + String.valueOf(desiredMute));
 		this.isMute = desiredMute;
 		firePlayerVolumneChangedEvent();
 	}
 
 	@Override
 	public void setVolume(Channel channel, long desiredVolume) throws RenderingControlException {
-		System.out.println("SetVol: " +  channel.name() + " " + String.valueOf(desiredVolume));
+		LOGGER.info("SetVol: " +  channel.name() + " " + String.valueOf(desiredVolume));
 		this.volume = desiredVolume;
 		firePlayerVolumneChangedEvent();
 	}
@@ -43,20 +47,20 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
-		System.out.println("loadCurrentContent: " +  getCurrentURI());
+		LOGGER.info("loadCurrentContent: " +  getCurrentURI());
 		setPlayerStateAndFire(TransportState.STOPPED);
 	}
 
 	@Override
 	public void nextTrack() throws AVTransportException {
-		System.out.println("next!");
+		LOGGER.info("next!");
 		throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
 		//firePlayerStateChangedEvent();
 	}
 
 	@Override
 	public void previousTrack() throws AVTransportException {
-		System.out.println("prev!");
+		LOGGER.info("prev!");
 		throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
 		//firePlayerStateChangedEvent();		
 	}
@@ -64,7 +68,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	@Override
 	public void play() throws AVTransportException {
 		if (getCurrentURI() != null) {
-			System.out.println("play!");
+			LOGGER.info("play!");
 			setPlayerStateAndFire(TransportState.PLAYING);
 		} else {
 			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
@@ -73,7 +77,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void stop() throws AVTransportException {
-		System.out.println("stop!");
+		LOGGER.info("stop!");
 		if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
 			setPlayerStateAndFire(TransportState.STOPPED);	
 		} else {
@@ -84,7 +88,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	@Override
 	public void pause() throws AVTransportException {
 		if (this.playerState == TransportState.PLAYING) {
-			System.out.println("pause!");
+			LOGGER.info("pause!");
 			setPlayerStateAndFire(TransportState.PAUSED_PLAYBACK);
 		} else if (this.playerState != TransportState.PAUSED_PLAYBACK) {
 			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
