@@ -8,57 +8,54 @@ import org.jupnp.support.model.Channel;
 
 import de.einwesen.heimklangwelle.renderers.MPVRendererWrapper;
 
-public class MpvBasics {
+public class MpvBasics implements ManualTestCase {
     
-	public static void main(String[] args) throws Exception {
+	private MPVRendererWrapper mpv = null;
+	public void runTest() throws Exception {
     	
-		//System.setProperty(MPVRendererWrapper.CONFIG_PROPERTY_MPV_PATH, "/path/to/File.exe");
+		//System.setProperty(MPVRendererWrapper.CONFIG_PROPERTY_MPV_PATH, "/path/to/file.exe");
+				
 		String testPl = new File(MpvBasics.class.getResource("/internetstreams.m3u").getFile()).getAbsolutePath(); 
+
+		mpv = new MPVRendererWrapper();
 		
-		MPVRendererWrapper mp3 = new MPVRendererWrapper();
-		
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			System.out.println("Shutdown!");
-			mp3.shutdown();
-		}));
-		
-		while(!mp3.isReady()) {
+		while(!mpv.isReady()) {
 			Thread.sleep(50);
 		}
 				
     	try {
     		System.out.println("Load content...");
-			mp3.setCurrentContent(testPl, "");
+			mpv.setCurrentContent(testPl, "");
 			Thread.sleep(10000);
 
-			if (mp3.getPlaylistSize() != 2) {
-				throw new IllegalStateException("Playlist size wa snot 2 as expected");
+			if (mpv.getPlaylistSize() != 2) {
+				throw new IllegalStateException("Playlist size was not 2 as expected");
 			} else {
 				System.out.println("... found 2 tracks as expected");	
 			}
 			
 			System.out.println("Set Volumne lower");
-			mp3.setVolume(Channel.Master, 50);
+			mpv.setVolume(Channel.Master, 50);
 			Thread.sleep(5000);
 			
 			
 			System.out.println("Mute");
-			mp3.setMute(Channel.Master, true);
+			mpv.setMute(Channel.Master, true);
 			Thread.sleep(10000);
 			
 			
 			System.out.println("Unmute");
-			mp3.setMute(Channel.Master, false);
+			mpv.setMute(Channel.Master, false);
 			Thread.sleep(5000);
 			
 			System.out.println("Next Track [2]");
-			mp3.nextTrack();
+			mpv.nextTrack();
 			Thread.sleep(10000);
 			
 			boolean failedAsExpected = false;
 			try {
 				System.out.println("Next Track [3] (Should fail) ...");
-				mp3.nextTrack();
+				mpv.nextTrack();
 			} catch (AVTransportException a) {
 				if (a.getErrorCode() == AVTransportErrorCode.ILLEGAL_SEEK_TARGET.getCode()) {
 					failedAsExpected = true;
@@ -74,15 +71,30 @@ public class MpvBasics {
 						
 			Thread.sleep(10000);
 			System.out.println("Prev Track [1]");
-			mp3.previousTrack();
+			mpv.previousTrack();
 			Thread.sleep(10000);
 			
 			
 		} catch (AVTransportException e) {
 			e.printStackTrace();
+		} finally {
+			System.out.println("Shutdown!");
+			mpv.shutdown();
 		}
-    	
-    	System.exit(0);
+    }
+	
+	public static void main(String[] args) throws Exception {
+		MpvBasics test = new MpvBasics();
+
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			if (test.mpv != null && test.mpv.isReady()) {
+				System.out.println("Forced shutdown!");
+				test.mpv.shutdown();				
+			}
+		}));		
 		
-    }	
+		test.runTest();
+		
+	}
+	
 }
