@@ -16,7 +16,7 @@ import org.jupnp.support.model.TransportSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.einwesen.heimklangwelle.HeimklangStation;
+import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.annotations.UpnpExclude;
@@ -31,7 +31,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	
 	public SingleInstanceAVTransportServiceImpl() {
 		super();
-		this.backendInstance = HeimklangStation.getCurrentRendererInstance(this);
+		this.backendInstance = HeimklangServiceRegistry.getCurrentRendererInstance(this);
 		this.instanceIds = new UnsignedIntegerFourBytes[] {this.backendInstance.getInstanceId()};
 	}
 	

@@ -9,17 +9,14 @@ import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.renderers.MPVRendererWrapper;
-import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
-import de.einwesen.heimklangwelle.upnpsupport.UpnpServiceRegistry;
 
 public class HeimklangStation {
 	private final static Logger LOGGER = LoggerFactory.getLogger(HeimklangStation.class);
 	
 	private static HeimklangStation instance = null;
     
-
-	private final AbstractRendererWrapper rendererInstance;
-    private final UpnpServiceRegistry serviceRegistry;
+    private final HeimklangServiceRegistry serviceRegistry;
+    private final AbstractRendererWrapper rendererInstance;
     
     private HeimklangStation() throws ValidationException, IOException {
         if (instance == null) {
@@ -29,9 +26,9 @@ public class HeimklangStation {
         	this.rendererInstance = new MPVRendererWrapper();        	
             
         	LOGGER.info("Initializing service registry...");
-        	this.serviceRegistry = new UpnpServiceRegistry();
+        	this.serviceRegistry = HeimklangServiceRegistry.getInstance();
         	this.serviceRegistry.startup();
-            this.serviceRegistry.addRendererDevice(this.rendererInstance);
+            this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);
         	           
         } else {
         	throw new IllegalStateException("There may only be one renderer instance ");
@@ -42,18 +39,7 @@ public class HeimklangStation {
     	this.rendererInstance.shutdown();
         this.serviceRegistry.shutdown();
     }
-    
-	public static AbstractRendererWrapper getCurrentRendererInstance() {
-		return getCurrentRendererInstance(null);
-	}
-
-	public static AbstractRendererWrapper getCurrentRendererInstance(RendererChangeEventListener listener) {		
-		if (listener != null) {
-			instance.rendererInstance.addListener(listener);
-		}
-		return instance.rendererInstance;
-	}
-    
+        
 	public static String getConfigProperty(final String name, final String defaultValue) {
     	
 		String val = null;

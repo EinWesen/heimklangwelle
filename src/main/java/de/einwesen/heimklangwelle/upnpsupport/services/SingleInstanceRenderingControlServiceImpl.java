@@ -9,7 +9,7 @@ import org.jupnp.support.renderingcontrol.RenderingControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.einwesen.heimklangwelle.HeimklangStation;
+import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 
@@ -23,7 +23,7 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 	
 	public SingleInstanceRenderingControlServiceImpl() {
 		super();
-		this.rendererInstance = HeimklangStation.getCurrentRendererInstance(this);
+		this.rendererInstance = HeimklangServiceRegistry.getCurrentRendererInstance(this);
 		this.instanceIds = new UnsignedIntegerFourBytes[] {this.rendererInstance.getInstanceId()};
 	}
 	
