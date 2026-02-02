@@ -1,5 +1,6 @@
 package de.einwesen.heimklangwelle.upnpsupport.services;
 
+import org.jupnp.internal.compat.java.beans.PropertyChangeSupport;
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.avtransport.AVTransportErrorCode;
 import org.jupnp.support.avtransport.AVTransportException;
@@ -48,7 +49,8 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	@Override
 	public void firePlayerStateChangedEvent(UnsignedIntegerFourBytes instanceId) {
 		try {
-			this.appendCurrentState(getLastChange(), instanceId);			
+			this.appendCurrentState(getLastChange(), instanceId);		
+			this.getLastChange().fire(this.getPropertyChangeSupport());
 		} catch (Throwable t) {
 			LOGGER.warn("Updating lastChanges failed", t);
 		}
@@ -59,14 +61,12 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	public void setAVTransportURI(UnsignedIntegerFourBytes instanceId, String currentURI, String currentURIMetaData) throws AVTransportException {
 		validateInstanceId(instanceId);
 		this.backendInstance.setCurrentContent(currentURI, currentURIMetaData);
-		firePlayerStateChangedEvent(instanceId);
 	}
 
 	@Override
 	public void stop(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
 		this.backendInstance.stop();
-		firePlayerStateChangedEvent(instanceId);
 	}
 
 	@Override
@@ -76,28 +76,24 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 			throw new AVTransportException(717, "Play speed not supported");			
 		}
 		this.backendInstance.play();
-		firePlayerStateChangedEvent(instanceId);
 	}
 
 	@Override
 	public void pause(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
 		this.backendInstance.pause();
-		firePlayerStateChangedEvent(instanceId);
 	}
 
 	@Override
 	public void next(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
 		this.backendInstance.nextTrack();
-		firePlayerStateChangedEvent(instanceId);
 	}
 
 	@Override
 	public void previous(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
 		this.backendInstance.previousTrack();	
-		firePlayerStateChangedEvent(instanceId);
 	}
 	
 	@Override
@@ -407,5 +403,11 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	    	return "%02d:%02d:%02d".formatted(hours, minutes, seconds);	    	
 	    }
 	}
+
+	@Override
+	public PropertyChangeSupport getPropertyChangeSupport() {
+		return super.getPropertyChangeSupport();
+	}
+	
 	
 }
