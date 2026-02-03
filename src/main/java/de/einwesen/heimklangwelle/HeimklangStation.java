@@ -29,9 +29,10 @@ public class HeimklangStation {
         	this.serviceRegistry = HeimklangServiceRegistry.getInstance();
         	this.serviceRegistry.startup();
             this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);
-        	           
+            this.serviceRegistry.registerLocalContentServer();
+            
         } else {
-        	throw new IllegalStateException("There may only be one renderer instance ");
+        	throw new IllegalStateException("There may only be one serviceInstance");
         }
     }
     

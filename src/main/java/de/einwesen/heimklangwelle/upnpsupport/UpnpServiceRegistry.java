@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpService;
+import org.jupnp.UpnpServiceConfiguration;
 import org.jupnp.UpnpServiceImpl;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.LocalDevice;
@@ -86,8 +86,8 @@ public class UpnpServiceRegistry {
     
 	protected final UpnpService upnpService;
 	
-	public UpnpServiceRegistry() {
-		this.upnpService = new UpnpServiceImpl(new DefaultUpnpServiceConfiguration());
+	public UpnpServiceRegistry(UpnpServiceConfiguration configuration) {
+		this.upnpService = new UpnpServiceImpl(configuration);
 	}
 	
 	public void startup() {

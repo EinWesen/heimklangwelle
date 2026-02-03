@@ -3,6 +3,10 @@ package de.einwesen.heimklangwelle;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.binding.annotations.AnnotationLocalServiceBinder;
 import org.jupnp.model.DefaultServiceManager;
 import org.jupnp.model.ServiceManager;
@@ -20,6 +24,12 @@ import org.jupnp.model.types.UDN;
 import org.jupnp.support.avtransport.lastchange.AVTransportLastChangeParser;
 import org.jupnp.support.lastchange.LastChangeAwareServiceManager;
 import org.jupnp.support.renderingcontrol.lastchange.RenderingControlLastChangeParser;
+import org.jupnp.transport.impl.ServletStreamServerConfigurationImpl;
+import org.jupnp.transport.impl.ServletStreamServerImpl;
+import org.jupnp.transport.spi.NetworkAddressFactory;
+import org.jupnp.transport.spi.StreamServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.FilteredAnnotationLocalServiceBinderImpl;
@@ -30,8 +40,23 @@ import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceAVTransport
 import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceRenderingControlServiceImpl;
 
 public class HeimklangServiceRegistry extends UpnpServiceRegistry {
+
+	private final static Logger LOGGER = LoggerFactory.getLogger(HeimklangServiceRegistry.class);
 	
-	private static HeimklangServiceRegistry instance = new HeimklangServiceRegistry();
+	private static HeimklangServiceRegistry instance = new HeimklangServiceRegistry();		
+	private static HeimklangJettyContainer jettyServer = new HeimklangJettyContainer();
+	
+	public HeimklangServiceRegistry() {
+		super(new DefaultUpnpServiceConfiguration() {			
+			@SuppressWarnings("rawtypes")
+			@Override
+			public StreamServer createStreamServer(NetworkAddressFactory networkAddressFactory) {				
+				return new ServletStreamServerImpl(new ServletStreamServerConfigurationImpl(
+					jettyServer, 
+					networkAddressFactory.getStreamListenPort()));
+			}			
+		});
+	}
 	
 	private AbstractRendererWrapper rendererInstance;
 	
@@ -91,7 +116,6 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
                 new LocalService[]{cmService, rcService, avService}
         );
         this.upnpService.getRegistry().addDevice(device);
-        
         return device;
     }
 
@@ -102,6 +126,37 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 		return instance.rendererInstance;
 	}
 
+	public void registerLocalContentServer() throws IOException {
+		
+		final String sourceDir = System.getProperty("user.dir");
+
+		// 1. Create the ServletHolder (Jetty's wrapper for servlets)
+		ServletHolder staticHolder = new ServletHolder(new DefaultServlet());
+
+		// 2. Point it to your files (can be a folder on disk or in your JAR)
+		staticHolder.setInitParameter("resourceBase", sourceDir);
+
+		// 3. (Optional) Recommended settings for sub-path serving
+		staticHolder.setInitParameter("pathInfoOnly", "true"); // Ensures correct file lookups
+		staticHolder.setInitParameter("dirAllowed", "false"); // Security: disable directory browsing
+
+		// 4. Register it at a specific path
+		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+		servletHandler.setContextPath("/heimklang/welle");
+		servletHandler.addServlet(staticHolder, "/*");
+
+		// 5. register with server 
+		jettyServer.registerHandler(servletHandler);	
+		
+		// 6. Register addional port
+		final int port = jettyServer.addConnector(null, 7777);
+		LOGGER.info("Serving '%s' at :%d%s/*".formatted(sourceDir, port, servletHandler.getContextPath()));
+	}
+	
+	@Override
+	public void startup() {
+		super.startup();
+	}
 
 	public static HeimklangServiceRegistry getInstance() {
     	return instance;
