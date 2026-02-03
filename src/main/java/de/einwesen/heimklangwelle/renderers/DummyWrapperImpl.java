@@ -12,8 +12,10 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRendererWrapper.class);
 	
-	private boolean isMute = false;
-	private long volume = 100;
+	private volatile boolean isMute = false;
+	private volatile long volume = 100;
+    private volatile long currentTrack = 0;
+    private volatile long playlistSize = 0;	
 
 	public DummyWrapperImpl() {
 		super();
@@ -36,7 +38,8 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	@Override
 	public void setVolume(Channel channel, long desiredVolume) throws RenderingControlException {
 		LOGGER.info("SetVol: " +  channel.name() + " " + String.valueOf(desiredVolume));
-		this.volume = desiredVolume;
+		this.isMute = false;
+		this.volume = desiredVolume;		
 		firePlayerVolumneChangedEvent();
 	}
 
@@ -47,23 +50,35 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
-		LOGGER.info("loadCurrentContent: " +  getCurrentURI());
+		String u = this.getCurrentURI();
+		if (u.toLowerCase().endsWith(".m3u")) {
+			this.playlistSize = 2;
+		} else {
+			this.playlistSize = 1;
+		}		
+		this.currentTrack = 1;
+		LOGGER.info("loadCurrentContent: " +  getCurrentURI() + " -> " + this.getPlaylistSize());
 		setPlayerStateAndFire(TransportState.STOPPED);
 	}
 
 	@Override
 	public void nextTrack() throws AVTransportException {
-		LOGGER.info("next!");
-		throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
-		//firePlayerStateChangedEvent();
+		if (this.currentTrack < this.playlistSize) {
+			this.currentTrack += 1;
+		} else {
+			throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
+		}		
 	}
 
 	@Override
 	public void previousTrack() throws AVTransportException {
-		LOGGER.info("prev!");
-		throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
-		//firePlayerStateChangedEvent();		
+		if (this.currentTrack > 1) {
+			this.currentTrack -= 1;
+		} else {
+			throw new AVTransportException(AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
+		}				
 	}
+
 
 	@Override
 	public void play() throws AVTransportException {
@@ -97,21 +112,17 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public long getPlaylistSize() throws AVTransportException {
-		return getCurrentTrack();
+		return this.playlistSize;
 	}
 
 	@Override
 	public long getCurrentTrack() throws AVTransportException {
-		if (!"".equalsIgnoreCase(getCurrentURI())) {
-			return 1;			
-		} else {
-			return 0;
-		}
+		return this.currentTrack;
 	}
 
 	@Override
 	public long getCurrentTrackPosition() throws AVTransportException {
-		return -1;
+		return 0;
 	}
 	
 }
