@@ -37,7 +37,8 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 	
 	public void firePlayerVolumneChangedEvent(UnsignedIntegerFourBytes instanceId) {
 		try {
-			this.appendCurrentState(getLastChange(), instanceId);			
+			this.appendCurrentState(getLastChange(), instanceId);
+			this.getLastChange().fire(this.getPropertyChangeSupport());
 		} catch (Throwable t) {
 			LOGGER.warn("Updating lastChanges failed", t);
 		}
