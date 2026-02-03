@@ -5,6 +5,7 @@ import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.avtransport.AVTransportErrorCode;
 import org.jupnp.support.avtransport.AVTransportException;
 import org.jupnp.support.avtransport.AbstractAVTransportService;
+import org.jupnp.support.avtransport.lastchange.AVTransportVariable;
 import org.jupnp.support.model.DeviceCapabilities;
 import org.jupnp.support.model.MediaInfo;
 import org.jupnp.support.model.PlayMode;
@@ -49,7 +50,13 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	@Override
 	public void firePlayerStateChangedEvent(UnsignedIntegerFourBytes instanceId) {
 		try {
-			this.appendCurrentState(getLastChange(), instanceId);		
+			this.appendCurrentState(getLastChange(), instanceId);
+			if (this.backendInstance.getCurrentTrackPosition() > -1) {
+				this.getLastChange().setEventedValue(
+						this.instanceIds[0],
+						new AVTransportVariable.RelativeTimePosition(
+								formatSeconds(this.backendInstance.getCurrentTrackPosition())));				
+			}
 			this.getLastChange().fire(this.getPropertyChangeSupport());
 		} catch (Throwable t) {
 			LOGGER.warn("Updating lastChanges failed", t);
