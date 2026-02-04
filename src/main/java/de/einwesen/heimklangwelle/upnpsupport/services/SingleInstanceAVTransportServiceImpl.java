@@ -42,9 +42,9 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 			throw new AVTransportException(AVTransportErrorCode.INVALID_INSTANCE_ID);
 		}
 		
-		if (!this.backendInstance.isReady()) {
-			throw new AVTransportException(AVTransportErrorCode.TRANSPORT_LOCKED);
-		}
+//		if (!this.backendInstance.isReady()) {
+//			throw new AVTransportException(AVTransportErrorCode.TRANSPORT_LOCKED);
+//		}
 	}
 
 	@Override
