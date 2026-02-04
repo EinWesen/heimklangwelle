@@ -120,8 +120,9 @@ public abstract class AbstractRendererWrapper {
 			this.currentURI = "";
 		}
 		
+		
 		if (currentURIMetaData != null) {
-			this.currentURIMetaData = currentURI;			
+			this.currentURIMetaData = currentURIMetaData;			
 		} else {
 			this.currentURIMetaData = "";
 		}
