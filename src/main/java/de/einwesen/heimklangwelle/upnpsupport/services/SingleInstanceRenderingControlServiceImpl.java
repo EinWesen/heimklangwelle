@@ -58,7 +58,6 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 	@Override
 	public void setMute(UnsignedIntegerFourBytes instanceId, String channelName, boolean desiredMute) throws RenderingControlException {
 		this.rendererInstance.setMute(validateInstanceChannel(instanceId, channelName), desiredMute);
-		firePlayerVolumneChangedEvent(instanceId);
 	}
 
 	@Override
@@ -69,7 +68,6 @@ public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRend
 	@Override
 	public void setVolume(UnsignedIntegerFourBytes instanceId, String channelName, UnsignedIntegerTwoBytes desiredVolume) throws RenderingControlException {
 		this.rendererInstance.setVolume(validateInstanceChannel(instanceId, channelName), desiredVolume.getValue());
-		firePlayerVolumneChangedEvent(instanceId);
 	}
 
 	@Override
