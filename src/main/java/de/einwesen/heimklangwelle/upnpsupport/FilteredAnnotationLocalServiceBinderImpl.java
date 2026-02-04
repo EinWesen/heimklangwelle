@@ -1,6 +1,7 @@
 package de.einwesen.heimklangwelle.upnpsupport;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -23,10 +24,14 @@ public class FilteredAnnotationLocalServiceBinderImpl extends AnnotationLocalSer
 	@Override
 	protected Map<Action, ActionExecutor> readActions(Class<?> clazz, Map<StateVariable, StateVariableAccessor> stateVariables, Set<Class> stringConvertibleTypes) throws LocalServiceBindingException {
 
-        Map<Action, ActionExecutor> map = new HashMap<>();
-
+        final ArrayList<String> filteredMethods = new ArrayList<>();
+        for (Method method : Reflections.getMethods(clazz, UpnpExclude.class)) {
+        	filteredMethods.add(method.getName());
+        }
+        
+        final Map<Action, ActionExecutor> map = new HashMap<>();
         for (Method method : Reflections.getMethods(clazz, UpnpAction.class)) {
-            if (!method.isAnnotationPresent(UpnpExclude.class)) {
+            if (!method.isAnnotationPresent(UpnpExclude.class) && !filteredMethods.contains(method.getName())) {
             	AnnotationActionBinder actionBinder = new AnnotationActionBinder(method, stateVariables, stringConvertibleTypes);
             	actionBinder.appendAction(map);            	
             }
