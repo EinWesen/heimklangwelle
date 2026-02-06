@@ -247,6 +247,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	    		this.playerState = TransportState.TRANSITIONING;
 	    		this.currentTrack = event.getLong("playlist_entry_id");
 	    		this.firePlayerStateChangedEvent();
+	    		break;
 	    	case PLAYBACK_RESTART:
 	    		this.setPlayerStateAndFire(TransportState.PLAYING);
 	    		break;
@@ -395,9 +396,11 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     
 	@Override
 	public void setVolume(Channel channel, long desiredVolume) throws RenderingControlException {
-		if (!sendCommand(new Object[]{CMD_SET_PROPERTY, "volume", Long.valueOf(desiredVolume)})) {
-			throw new RenderingControlException(ErrorCode.ACTION_FAILED);
-		};
+		if (desiredVolume != this.volume || this.preMuteVolume > -1) {
+			if (!sendCommand(new Object[]{CMD_SET_PROPERTY, "volume", Long.valueOf(desiredVolume)})) {
+				throw new RenderingControlException(ErrorCode.ACTION_FAILED);
+			};			
+		}
 	}	
 	
 	@Override
