@@ -36,11 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
+import de.einwesen.heimklangwelle.renderers.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.renderers.RendererConnectionManagerServiceImpl;
 import de.einwesen.heimklangwelle.renderers.SingleInstanceAVTransportServiceImpl;
 import de.einwesen.heimklangwelle.renderers.SingleInstanceRenderingControlServiceImpl;
 import de.einwesen.heimklangwelle.upnpsupport.FilteredAnnotationLocalServiceBinderImpl;
-import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.UpnpServiceRegistry;
 
 public class HeimklangServiceRegistry extends UpnpServiceRegistry {

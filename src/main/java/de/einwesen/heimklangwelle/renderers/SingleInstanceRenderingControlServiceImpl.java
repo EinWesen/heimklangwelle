@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
-import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 
 //UPNP annotations are inherited from parent
 public class SingleInstanceRenderingControlServiceImpl extends AbstractAudioRenderingControl implements RendererChangeEventListener {

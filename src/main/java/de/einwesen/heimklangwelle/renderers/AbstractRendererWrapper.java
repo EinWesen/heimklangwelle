@@ -12,8 +12,6 @@ import org.jupnp.support.renderingcontrol.RenderingControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
-
 public abstract class AbstractRendererWrapper {
 	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRendererWrapper.class);
 	

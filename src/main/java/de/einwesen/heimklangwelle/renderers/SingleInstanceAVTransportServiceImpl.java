@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
-import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.annotations.UpnpExclude;
 
 public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportService implements RendererChangeEventListener {

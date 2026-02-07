@@ -1,4 +1,4 @@
-package de.einwesen.heimklangwelle.upnpsupport;
+package de.einwesen.heimklangwelle.renderers;
 
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 
