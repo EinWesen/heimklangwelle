@@ -6,10 +6,9 @@ import org.jupnp.support.model.ProtocolInfo;
 import org.jupnp.support.model.ProtocolInfos;
 
 // UPNP annotations are inherited from parent
-public class ConnectionManagerServiceImpl extends ConnectionManagerService {
+public class RendererConnectionManagerServiceImpl extends ConnectionManagerService {
     
-	// TODO: I now have learned i wil need more than Connectionmanager, we need to rework this somehow
-    public ConnectionManagerServiceImpl() {
+    public RendererConnectionManagerServiceImpl() {
         super(
                 new ProtocolInfos(), // sourceProtocolInfo (empty for renderer)
                 new ProtocolInfos( // sink

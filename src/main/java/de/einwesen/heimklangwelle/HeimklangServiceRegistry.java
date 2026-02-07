@@ -39,7 +39,7 @@ import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.FilteredAnnotationLocalServiceBinderImpl;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.UpnpServiceRegistry;
-import de.einwesen.heimklangwelle.upnpsupport.services.ConnectionManagerServiceImpl;
+import de.einwesen.heimklangwelle.upnpsupport.services.RendererConnectionManagerServiceImpl;
 import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceAVTransportServiceImpl;
 import de.einwesen.heimklangwelle.upnpsupport.services.SingleInstanceRenderingControlServiceImpl;
 
@@ -97,8 +97,8 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         final AnnotationLocalServiceBinder annotationBinder = new FilteredAnnotationLocalServiceBinderImpl();
 
         @SuppressWarnings("unchecked")
-		final LocalService<ConnectionManagerServiceImpl> cmService = annotationBinder.read(ConnectionManagerServiceImpl.class);
-        cmService.setManager(new DefaultServiceManager<>(cmService, ConnectionManagerServiceImpl.class));
+		final LocalService<RendererConnectionManagerServiceImpl> cmService = annotationBinder.read(RendererConnectionManagerServiceImpl.class);
+        cmService.setManager(new DefaultServiceManager<>(cmService, RendererConnectionManagerServiceImpl.class));
 
         @SuppressWarnings("unchecked")
 		final LocalService<SingleInstanceRenderingControlServiceImpl> rcService = 
