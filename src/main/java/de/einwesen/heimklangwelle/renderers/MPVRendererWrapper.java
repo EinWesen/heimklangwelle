@@ -92,12 +92,12 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 
     private Process mpv;
     private IpcChannelBridge ipc;
+    private Thread ipcConsumer;
 
     private volatile long volume = 100;  
     private volatile long preMuteVolume = -1;
     private volatile long currentTrack = 0;
     private volatile long currentTrackTimePos = -1;
-    private volatile long nextTimeUpdate = 0;
     
     private volatile long playlistSize = 0;
     private volatile String version = this.getClass().getName();
@@ -128,7 +128,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
                 "--input-ipc-server=" + ipcPipePath
         ).start();        
 
-        ipc = new IpcChannelBridge(this.ipcType, this.ipcPipePath, this::ipcConsumer, this::ipcError);
+        ipc = new IpcChannelBridge(this.ipcType, this.ipcPipePath, this::ipcError);
+        //JAVA 21: this.ipcConsumer = Thread.startVirtualThread(this.ipcConsumer());
+        this.ipcConsumer = new Thread(this.ipcConsumer());
+        this.ipcConsumer.start();
         
         for (ObservedProperty p : ObservedProperty.values()) {
         	if (p != ObservedProperty.UNKNOWN_PROPERTY) {
@@ -153,15 +156,6 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     	synchronized (requestIdSeq) {
     		return requestIdSeq.nextInt();
 		}
-    }	
-    
-    private void setTrackTimePositionAndFire(long newPos) {
-    	this.currentTrackTimePos = newPos;
-    	final long timeMillis = System.currentTimeMillis();
-    	if (timeMillis > this.nextTimeUpdate) {
-    		firePlayerStateChangedEvent();
-			this.nextTimeUpdate += (timeMillis + 5000); 
-    	}
     }	
     
     private CompletableFuture<JSONObject> fetchCommandResult(Object[] cmd) {
@@ -190,7 +184,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	    		LOGGER.trace(cmdString);	    		
 
 	    		// if this returns true, is accepted into the sending queue
-	    		if (!this.ipc.write(cmdString)) {
+	    		if (!this.ipc.writeln(cmdString)) {
 	    			throw new IOException("command was not accepted by ipc channel");
 	    		}
 	    	
@@ -232,12 +226,24 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     	LOGGER.warn("Error in IPC", e);
     }
     
-    private void ipcConsumer(String data) {
-    	try {    		
-    		handleEvent(new JSONObject(data));            		
-    	} catch (Throwable t) {
-    		LOGGER.error("Could not handle event", t);
-    	}    	
+    private Runnable ipcConsumer() {
+    	return new Runnable() {			
+			@Override
+			public void run() {
+				try {    		
+					while(ipc.isReading() || !ipc.isOutputBufferEmpty()) {
+						final String data = ipc.readLine(2, TimeUnit.SECONDS);
+						if (data != null) { // Only null if timeout was reached
+							handleEvent(new JSONObject(data));
+						}
+					}
+				} catch (InterruptedException t) {
+					// This should mean thread is being killed
+					LOGGER.error("ipcConsumer was interrupted", t);
+				}    	
+				
+			}
+		};
     }
     
     private void handleEvent(JSONObject event) {
@@ -290,7 +296,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 						break;
 					case TIME_POS:
 						if (event.has("data")) {
-							this.setTrackTimePositionAndFire(event.getBigDecimal("data").longValue());							
+							this.currentTrackTimePos = event.getBigDecimal("data").longValue();							
 						}
 					case UNKNOWN_PROPERTY:					
 					default:
@@ -327,7 +333,11 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     		// if we still can
     		if (!ipc.isClosed()) {
     			this.ipc.expectCloseByRemote();
-    			sendCommand(new Object[]{"quit"});    		    			
+    			try {
+					sendCommand(new Object[]{"quit"});
+				} catch (Throwable e) {
+					LOGGER.warn("could not send quit to process", e);
+				}    		    			
     		}
     		
     	}
@@ -346,9 +356,19 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         	try { this.ipc.close(); } catch (Throwable ignored) {}        	
         }
         
+        if (this.ipcConsumer.isAlive()) {
+        	// Lets  wait a short moment
+        	try { Thread.sleep(TimeUnit.SECONDS.toMillis(5));} catch (InterruptedException ignored) {}
+        	try {
+        		if (this.ipcConsumer.isAlive()) {
+        			this.ipcConsumer.isInterrupted();        			
+        		}
+			} catch (Throwable ignored) {}
+        }
+        
         if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
-        	setPlayerStateAndFire(TransportState.STOPPED);
-        	setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);        	
+        	this.setPlayerStateAndFire(TransportState.STOPPED);
+        	this.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);        	
         }
     }
         

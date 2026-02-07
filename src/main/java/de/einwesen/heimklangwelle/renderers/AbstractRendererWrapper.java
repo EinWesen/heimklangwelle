@@ -32,31 +32,47 @@ public abstract class AbstractRendererWrapper {
 	public boolean addListener(RendererChangeEventListener e) {
 		return changeListeners.add(e);
 	}
+		
+	protected void fireEvent(Runnable r) {
+		// JAVA 21:  Thread.startVirtualThread(r);
+		new Thread(r).start();
+	}
 	
 	protected void firePlayerStateChangedEvent() {
-		synchronized (changeListeners) {
-			LOGGER.debug("fire!");
-			for (RendererChangeEventListener l : this.changeListeners) {
-				l.firePlayerStateChangedEvent(this.instanceId);
-			}			
-		}
+		LOGGER.debug("fire!");
+		fireEvent(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (changeListeners) {
+					for (RendererChangeEventListener l : changeListeners) {
+						l.firePlayerStateChangedEvent(instanceId);
+					}								
+				}
+			}
+		});
 	}
 	
     protected void setPlayerStateAndFire(TransportState state) {
-    	if (this.playerState != state) {
+    	if (this.playerState != state) {    		
     		LOGGER.debug("fire!:" + state);
+    		System.out.println("fore:" +  state);
     		this.playerState = state;
     		this.firePlayerStateChangedEvent();
     	}
     }	
 	
 	protected void firePlayerVolumneChangedEvent() {
-		synchronized (changeListeners) {
-			LOGGER.debug("fire!");
-			for (RendererChangeEventListener l : this.changeListeners) {
-				l.firePlayerVolumneChangedEvent(this.instanceId);
-			}			
-		}
+		LOGGER.debug("fire!");
+		fireEvent(new Runnable() {
+			@Override
+			public void run() {		
+				synchronized (changeListeners) {
+					for (RendererChangeEventListener l : changeListeners) {			
+						l.firePlayerVolumneChangedEvent(instanceId);
+					}			
+				}
+			}
+		});
 	}	
 	
 	public UnsignedIntegerFourBytes getInstanceId() {

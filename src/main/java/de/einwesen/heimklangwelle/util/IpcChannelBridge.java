@@ -35,9 +35,9 @@ public class IpcChannelBridge implements AutoCloseable {
 	
 	private final ExecutorService ioExecutor = Executors.newFixedThreadPool(3);
 	private final ExecutorService consumerExecutor = Executors.newSingleThreadExecutor();
-	private final BlockingQueue<String> sinkQueue = new LinkedBlockingQueue<>();
+	private final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
+	private final BlockingQueue<String> outputQueue = new LinkedBlockingQueue<>();
 
-	private final Consumer<String> consumer;
 	private final Consumer<ExecutionException> errorConsumer;
 	
 	private volatile boolean shouldBeRunning = true;
@@ -56,8 +56,8 @@ public class IpcChannelBridge implements AutoCloseable {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public IpcChannelBridge(Class<? extends java.nio.channels.Channel> channelType, String pipePath, Consumer<String> consumer) throws FileNotFoundException, IOException {
-		this(channelType, pipePath, consumer, null);		
+	public IpcChannelBridge(Class<? extends java.nio.channels.Channel> channelType, String pipePath) throws FileNotFoundException, IOException {
+		this(channelType, pipePath, null);		
 	}
 	
 	/**
@@ -68,8 +68,7 @@ public class IpcChannelBridge implements AutoCloseable {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public IpcChannelBridge(Class<? extends java.nio.channels.Channel> channelType, String pipePath, Consumer<String> consumer, Consumer<ExecutionException> errorConsumer) throws FileNotFoundException, IOException {
-		this.consumer = consumer;
+	public IpcChannelBridge(Class<? extends java.nio.channels.Channel> channelType, String pipePath, Consumer<ExecutionException> errorConsumer) throws FileNotFoundException, IOException {
 		this.errorConsumer = errorConsumer;
 		
 		if (AsynchronousFileChannel.class.equals(channelType)) {
@@ -92,8 +91,7 @@ public class IpcChannelBridge implements AutoCloseable {
 		while (readingBuffer.hasRemaining()) {
 			byte b = readingBuffer.get();						
 			if (b == '\n') {
-				final String data = lineBuffer.toString(StandardCharsets.UTF_8); // final is important because of lambda
-				this.consumerExecutor.submit(() -> this.consumer.accept(data));
+				this.outputQueue.offer(lineBuffer.toString(StandardCharsets.UTF_8));
 				lineBuffer.reset();
 			} else if (b != '\r') {
 				lineBuffer.write(b);
@@ -155,7 +153,7 @@ public class IpcChannelBridge implements AutoCloseable {
         	try {
 				
         		try {
-					String msg = this.sinkQueue.take();	
+					String msg = this.inputQueue.take();	
 					if (msg != STOP_QUEUE_MARKER) { // getting that specific string object marks the end
 				    	
 						ByteBuffer buffer = ByteBuffer.wrap((msg + "\n").getBytes(StandardCharsets.UTF_8));
@@ -244,7 +242,10 @@ public class IpcChannelBridge implements AutoCloseable {
 							LOGGER.error("Reader finished due to errors");
 						}
 					}
+				} else {
+					readerRunning = false;
 				}
+					
 			}
 		});
 
@@ -257,7 +258,7 @@ public class IpcChannelBridge implements AutoCloseable {
         while (shouldBeRunning && writerRunning) {
         	try {
 				try {
-					String msg = this.sinkQueue.take();	
+					String msg = this.inputQueue.take();	
 					if (msg != STOP_QUEUE_MARKER) { // getting that specific string object marks the end
 						blockingWriteToChannel(msg, this.namedPipeChannel);
 						errorCounter = 0;
@@ -289,7 +290,9 @@ public class IpcChannelBridge implements AutoCloseable {
         					LOGGER.error("Writer finished due to errors");        	
         				}        			        				
         			}
-        		}				
+        		} else {
+        			writerRunning = false;
+        		}
 			}        	
         }
             	    
@@ -329,21 +332,27 @@ public class IpcChannelBridge implements AutoCloseable {
     }
      
     
-    
-    public boolean write(String data) throws IOException {
+    /**
+     * A line to be written, excluding line end
+     * 
+     * @param data
+     * @return
+     * @throws IOException
+     */
+    public boolean writeln(String data) throws IOException {
     	if (data == null) throw new IllegalArgumentException("data may not be null");
     	if (!this.shouldBeRunning) throw new IOException("Already closed");
     	if (!this.writerRunning) throw new IOException("Sink has broken down");
-    	return this.sinkQueue.offer(data);    	
+    	return this.inputQueue.offer(data);    	
     }
     
     @Override
     public void close() throws Exception {
     	this.shouldBeRunning = false;
     	
-    	this.sinkQueue.offer(STOP_QUEUE_MARKER); // unblock writer thread waiting on "take"
+    	this.inputQueue.offer(STOP_QUEUE_MARKER); // unblock writer thread waiting on "take"
     	
-    	while (this.readerRunning && !sinkQueue.isEmpty()) {
+    	while (this.readerRunning && !inputQueue.isEmpty()) {
     		Thread.sleep(50);
     	}
 
@@ -465,4 +474,38 @@ public class IpcChannelBridge implements AutoCloseable {
 		return this.writerRunning;
 	}
 
+	/**
+	 * Reads a line of text. A line is considered to be terminated by a line feed ('\n'),
+	 * waiting if necessary until an full line is available becomes available.
+	 * 
+	 * @return
+	 * @throws InterruptedException if interrupted while waiting
+	 */	
+	public String readLine() throws InterruptedException {
+		return this.outputQueue.take();
+	}
+
+	/**
+	 * Reads a line of text. A line is considered to be terminated by a line feed ('\n'),
+	 * waiting up to the specified wait time if necessary until a full line become available.
+	 * 
+	 * @param  how long to wait before giving up, in units of unit
+	 * @param a TimeUnit determining how to interpret the timeout parameter 
+	 * 
+	 * @return a line, or null if the specified waiting time elapses before an element is available
+	 * @throws InterruptedException if interrupted while waiting
+	 */		
+	public String readLine(long timeout, TimeUnit unit) throws InterruptedException {
+		return this.outputQueue.poll(0, unit);		
+	}
+
+	public boolean isOutputBufferEmpty() {
+		return outputQueue.isEmpty();
+	}
+	
+	public boolean isInputBufferEmpty() {
+		return inputQueue.isEmpty();
+	}
+	
+	
 }
