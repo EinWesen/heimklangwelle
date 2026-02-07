@@ -84,42 +84,7 @@
 					</execution>
 				</executions>
 			</plugin>
-<!--
-			<plugin>
-				<groupId>com.coderplus.maven.plugins</groupId>
-				<artifactId>copy-rename-maven-plugin</artifactId>
-				<version>1.0</version>
-				<executions>
-					<execution>
-						<id>copy-file</id>
-						<phase>package</phase>
-						<goals>
-							<goal>copy</goal>
-						</goals>
-						<configuration>
-							<fileSets>
-								<fileSet>
-									<sourceFile>${project.basedir}/src/main/shell/runapp.sh</sourceFile>
-									<destinationFile>${project.build.directory}/dist/runapp.sh</destinationFile>
-								</fileSet>
-								<fileSet>
-									<sourceFile>${project.basedir}/src/test/shell/runtest.sh</sourceFile>
-									<destinationFile>${project.build.directory}/dist/runtest.sh</destinationFile>
-								</fileSet>
-								<fileSet>
-									<sourceFile>${project.basedir}/src/main/shell/runapp.cmd</sourceFile>
-									<destinationFile>${project.build.directory}/dist/runapp.cmd</destinationFile>
-								</fileSet>
-								<fileSet>
-									<sourceFile>${project.basedir}/src/test/shell/runtest.cmd</sourceFile>
-									<destinationFile>${project.build.directory}/dist/runtest.cmd</destinationFile>
-								</fileSet>								
-							</fileSets>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
--->
+
 	      <plugin>
 	        <artifactId>maven-resources-plugin</artifactId>
 	        <version>3.4.0</version>
