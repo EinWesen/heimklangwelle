@@ -61,13 +61,21 @@ public abstract class AbstractConnectionManagerService extends ConnectionManager
 		super(sourceProtocolInfo, sinkProtocolInfo);
 	}
 
+	public static ProtocolInfo newDefaultPlayerProtocolInfo(String contentType) {
+		return newDefaultPlayerProtocolInfo(contentType, null);
+	}
+	
 	public static ProtocolInfo newDefaultPlayerProtocolInfo(String contentType, String dnlaProfile) {
         return new ProtocolInfo(
                 Protocol.HTTP_GET,
                 "*",
                 contentType,
-                dnlaProfile + ";" + DNLA_OP_NO_SEEKING_SUPPORTED + ";" + DNLA_FLAGS_UNDEFINED
+                (dnlaProfile!=null ? dnlaProfile + ";" : "") + DNLA_OP_NO_SEEKING_SUPPORTED + ";" + DNLA_FLAGS_UNDEFINED
             );
+	}
+	
+	public static ProtocolInfo newDefaultServerProtocolInfo(String contentType) {
+		return newDefaultServerProtocolInfo(contentType, null);
 	}
 	
 	public static ProtocolInfo newDefaultServerProtocolInfo(String contentType, String dnlaProfile) {
@@ -75,7 +83,7 @@ public abstract class AbstractConnectionManagerService extends ConnectionManager
                 Protocol.HTTP_GET,
                 "*",
                 contentType,
-                dnlaProfile + ";" + DNLA_OP_BYTESEEKING_SUPPORTED + ";" + DNLA_FLAGS_SEEK_ONLY
+                (dnlaProfile!=null ? dnlaProfile + ";" : "") + DNLA_OP_BYTESEEKING_SUPPORTED + ";" + DNLA_FLAGS_SEEK_ONLY
             );
 	}
 	
