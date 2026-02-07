@@ -10,7 +10,9 @@ import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.binding.annotations.AnnotationLocalServiceBinder;
 import org.jupnp.model.DefaultServiceManager;
 import org.jupnp.model.ServiceManager;
+import org.jupnp.model.UnsupportedDataException;
 import org.jupnp.model.ValidationException;
+import org.jupnp.model.message.control.ActionMessage;
 import org.jupnp.model.meta.DeviceDetails;
 import org.jupnp.model.meta.DeviceIdentity;
 import org.jupnp.model.meta.Icon;
@@ -24,9 +26,11 @@ import org.jupnp.model.types.UDN;
 import org.jupnp.support.avtransport.lastchange.AVTransportLastChangeParser;
 import org.jupnp.support.lastchange.LastChangeAwareServiceManager;
 import org.jupnp.support.renderingcontrol.lastchange.RenderingControlLastChangeParser;
+import org.jupnp.transport.impl.SOAPActionProcessorImpl;
 import org.jupnp.transport.impl.ServletStreamServerConfigurationImpl;
 import org.jupnp.transport.impl.ServletStreamServerImpl;
 import org.jupnp.transport.spi.NetworkAddressFactory;
+import org.jupnp.transport.spi.SOAPActionProcessor;
 import org.jupnp.transport.spi.StreamServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +58,21 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 				return new ServletStreamServerImpl(new ServletStreamServerConfigurationImpl(
 					jettyServer, 
 					networkAddressFactory.getStreamListenPort()));
-			}			
+			}
+
+			@Override
+			protected SOAPActionProcessor createSOAPActionProcessor() {
+				return new SOAPActionProcessorImpl() {
+					@Override
+					protected String getMessageBody(ActionMessage message) throws UnsupportedDataException {
+						final String tmp = super.getMessageBody(message).replace("\0", "").replace("\u0000", "");
+						if (tmp.length() == 0) {
+				            throw new UnsupportedDataException("Can't transform null or non-string/zero-length body of: " + message);
+				        }
+						return tmp;
+					}
+				};
+			}
 		});
 	}
 	
