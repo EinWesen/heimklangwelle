@@ -29,7 +29,7 @@ public class HeimklangStation {
         	this.serviceRegistry = HeimklangServiceRegistry.getInstance();
         	this.serviceRegistry.startup();
             this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);
-            this.serviceRegistry.registerLocalContentServer();
+            //this.serviceRegistry.registerLocalContentServer();
             
         } else {
         	throw new IllegalStateException("There may only be one serviceInstance");
@@ -63,10 +63,19 @@ public class HeimklangStation {
 	}
 	
     public static void main(String[] args) throws Exception {
-    	instance = new HeimklangStation();
-        System.out.println(HeimklangStation.class.getSimpleName() +  " running, press ENTER to exit...");
-        System.in.read();
-        instance.shutdown();
+		try {			
+			instance = new HeimklangStation();
+			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+				instance.shutdown();
+			}));		    	
+			System.out.println(HeimklangStation.class.getSimpleName() +  " running, press ENTER to exit...");
+			System.in.read();
+			System.out.println("... shutdown requested!");
+			System.exit(0);
+		} catch (Throwable e) {
+			e.printStackTrace(System.err);
+			System.exit(1);
+		}
     }	
     
 }
