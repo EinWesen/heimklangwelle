@@ -1,4 +1,4 @@
-package de.einwesen.heimklangwelle.upnpsupport.services;
+package de.einwesen.heimklangwelle.renderers;
 
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.model.types.UnsignedIntegerTwoBytes;
@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
-import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 
 //UPNP annotations are inherited from parent

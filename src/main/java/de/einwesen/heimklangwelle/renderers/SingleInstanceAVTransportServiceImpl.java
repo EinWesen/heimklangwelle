@@ -1,4 +1,4 @@
-package de.einwesen.heimklangwelle.upnpsupport.services;
+package de.einwesen.heimklangwelle.renderers;
 
 import org.jupnp.internal.compat.java.beans.PropertyChangeSupport;
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
-import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.upnpsupport.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.upnpsupport.annotations.UpnpExclude;
 

@@ -1,4 +1,4 @@
-package de.einwesen.heimklangwelle.upnpsupport.services;
+package de.einwesen.heimklangwelle.renderers;
 
 import org.jupnp.support.connectionmanager.ConnectionManagerService;
 import org.jupnp.support.model.Protocol;
