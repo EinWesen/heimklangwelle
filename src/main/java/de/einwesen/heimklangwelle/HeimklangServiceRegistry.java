@@ -1,7 +1,8 @@
 package de.einwesen.heimklangwelle;
 
 import java.io.IOException;
-import java.util.UUID;
+import java.net.InetAddress;
+import java.util.Iterator;
 
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -35,6 +36,8 @@ import org.jupnp.transport.spi.StreamServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.einwesen.heimklangwelle.contentdirectory.ContentDirectoryServiceImpl;
+import de.einwesen.heimklangwelle.contentdirectory.MediaServerConnectionManagerServiceImpl;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.renderers.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.renderers.RendererConnectionManagerServiceImpl;
@@ -49,7 +52,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 	
 	private static HeimklangServiceRegistry instance = new HeimklangServiceRegistry();		
 	private static HeimklangJettyContainer jettyServer = new HeimklangJettyContainer();
-	
+		
 	public HeimklangServiceRegistry() {
 		super(new DefaultUpnpServiceConfiguration() {			
 			@SuppressWarnings("rawtypes")
@@ -77,15 +80,16 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 	}
 	
 	private AbstractRendererWrapper rendererInstance;
+	private String contentServerBase = null; 
 	
     public LocalDevice registerLocalRendererDevice(AbstractRendererWrapper rendererInstance) throws ValidationException, IOException {
         this.rendererInstance = rendererInstance;
         
-    	DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(rendererInstance.getClass().getName()+ "-" + UUID.randomUUID()));
+    	final DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(rendererInstance.getClass().getName()));
         DeviceType type = new UDADeviceType("MediaRenderer", 1);
 
-        DeviceDetails details = new DeviceDetails(
-                this.getClass().getSimpleName() + " " +  type.getDisplayString(),
+        final DeviceDetails details = new DeviceDetails(
+                HeimklangStation.class.getPackageName() + " " +  type.getDisplayString(),
                 new ManufacturerDetails("https://github.com/EinWesen"),
                 new ModelDetails(
                         rendererInstance.getClass().getSimpleName(),
@@ -144,7 +148,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 		return instance.rendererInstance;
 	}
 
-	public void registerLocalContentServer() throws IOException {
+	public LocalDevice registerLocalContentServerDevice() throws ValidationException, IOException {
 		
 		final String sourceDir = System.getProperty("user.dir");
 
@@ -167,8 +171,44 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 		jettyServer.registerHandler(servletHandler);	
 		
 		// 6. Register addional port
-		final int port = jettyServer.addConnector(null, 7777);
-		LOGGER.info("Serving '%s' at :%d%s/*".formatted(sourceDir, port, servletHandler.getContextPath()));
+		final int port = jettyServer.addConnector(null, 0);		
+		
+		final Iterator<InetAddress> it = this.upnpService.getConfiguration().createNetworkAddressFactory().getBindAddresses();
+		final InetAddress addr = it.hasNext() ? it.next() : InetAddress.getLocalHost();
+		
+		this.contentServerBase = "http://" + addr.getHostAddress() + ":" + port + servletHandler.getContextPath();		
+		LOGGER.info("Added Jetty connector for '%s' at %s/*".formatted(sourceDir, this.contentServerBase ));
+		
+    	DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(ContentDirectoryServiceImpl.class.getName()));
+        DeviceType type = new UDADeviceType("MediaServer", 1);
+
+        DeviceDetails details = new DeviceDetails(
+        		HeimklangStation.class.getPackageName() + " " +  type.getDisplayString(),
+                new ManufacturerDetails("https://github.com/EinWesen")
+        );
+        
+        final AnnotationLocalServiceBinder annotationBinder = new FilteredAnnotationLocalServiceBinderImpl();
+
+        
+        @SuppressWarnings("unchecked")
+		final LocalService<MediaServerConnectionManagerServiceImpl> cmService = annotationBinder.read(MediaServerConnectionManagerServiceImpl.class);
+        cmService.setManager(new DefaultServiceManager<>(cmService, MediaServerConnectionManagerServiceImpl.class));
+
+        @SuppressWarnings("unchecked")
+		final LocalService<ContentDirectoryServiceImpl> contentService = annotationBinder.read(ContentDirectoryServiceImpl.class);
+        contentService.setManager(new DefaultServiceManager<>(contentService, ContentDirectoryServiceImpl.class));
+
+        Icon icon = null; // optional, you can provide a PNG icon for the device
+
+        LocalDevice device = new LocalDevice(
+                identity,
+                type,
+                details,
+                new Icon[]{icon},
+                new LocalService[]{cmService, contentService}
+        );
+        this.upnpService.getRegistry().addDevice(device);
+        return device;		
 	}
 	
 	@Override
@@ -179,5 +219,9 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 	public static HeimklangServiceRegistry getInstance() {
     	return instance;
     }
+
+	public static String getContentServerBase() {
+		return instance.contentServerBase;
+	}
 	
 }
