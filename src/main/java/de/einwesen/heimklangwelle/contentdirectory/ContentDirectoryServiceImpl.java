@@ -13,6 +13,7 @@ import java.util.Base64.Encoder;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jetty.http.MimeTypes;
 import org.jupnp.support.contentdirectory.AbstractContentDirectoryService;
 import org.jupnp.support.contentdirectory.ContentDirectoryErrorCode;
 import org.jupnp.support.contentdirectory.ContentDirectoryException;
@@ -34,33 +35,35 @@ import org.jupnp.support.model.item.VideoItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
+
 //UPNP annotations are inherited from parent
 public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ContentDirectoryServiceImpl.class);
-	
-	private static final Map<String, ProtocolInfo> supportedMimetypes = new HashMap<>();
+		
+	private static final Map<String, ProtocolInfo> supportedMimetypeProtocols = new HashMap<>();
 	{
 		for (ProtocolInfo info : MediaServerConnectionManagerServiceImpl.SUPPORTED_PROTOCOLS) {
-			supportedMimetypes.put(info.getContentFormat(), info);
+			supportedMimetypeProtocols.put(info.getContentFormat(), info);
 		}		
 	}
 	
-	private static Map<String, String> extensionMimetype = new HashMap<>(); 
+	public static MimeTypes fileExtensionMimeTypes = new MimeTypes();
 	{
-		extensionMimetype.put("mp3", "audio/mpeg");
-		extensionMimetype.put("flac", "audio/flac");
-		extensionMimetype.put("ogg", "audio/ogg");
-		extensionMimetype.put("m4a", "audio/mp4");
-		extensionMimetype.put("aac", "audio/aac");
-		extensionMimetype.put("mka", "audio/x-matroska");
-		extensionMimetype.put("mkv", "video/x-matroska");
-		extensionMimetype.put("mp4", "video/mp4");
-		extensionMimetype.put("m3u", "audio/x-mpegurl");
-		extensionMimetype.put("m3u8", "application/vnd.apple.mpegurl");
-		extensionMimetype.put("png", "image/png");
-		extensionMimetype.put("jpg", "image/jpeg");
-		extensionMimetype.put("gif", "image/gif");
+		fileExtensionMimeTypes.addMimeMapping("mp3", "audio/mpeg");
+		fileExtensionMimeTypes.addMimeMapping("flac", "audio/flac");
+		fileExtensionMimeTypes.addMimeMapping("ogg", "audio/ogg");
+		fileExtensionMimeTypes.addMimeMapping("m4a", "audio/mp4");
+		fileExtensionMimeTypes.addMimeMapping("aac", "audio/aac");
+		fileExtensionMimeTypes.addMimeMapping("mka", "audio/x-matroska");
+		fileExtensionMimeTypes.addMimeMapping("mkv", "video/x-matroska");
+		fileExtensionMimeTypes.addMimeMapping("mp4", "video/mp4");
+		fileExtensionMimeTypes.addMimeMapping("m3u", "audio/x-mpegurl");
+		fileExtensionMimeTypes.addMimeMapping("m3u8", "application/vnd.apple.mpegurl");
+		fileExtensionMimeTypes.addMimeMapping("png", "image/png");
+		fileExtensionMimeTypes.addMimeMapping("jpg", "image/jpeg");
+		fileExtensionMimeTypes.addMimeMapping("gif", "image/gif");
 	}	
 	
 	private static final Encoder BASE64ENCODER = Base64.getUrlEncoder().withoutPadding();
@@ -190,7 +193,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 						count += 1;
 					} else {
 						final String mimeTypeStr = getMimetype(child);
-						if (mimeTypeStr != null && supportedMimetypes.get(mimeTypeStr) != null) {
+						if (mimeTypeStr != null && supportedMimetypeProtocols.get(mimeTypeStr) != null) {
 							count += 1; 
 						}
 					}
@@ -218,7 +221,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		if (mimeTypeStr == null) return null;
 		
 		
-		final ProtocolInfo protocolinfo = supportedMimetypes.get(mimeTypeStr);
+		final ProtocolInfo protocolinfo = supportedMimetypeProtocols.get(mimeTypeStr);
 		
 		if (protocolinfo == null) return null;		
 
@@ -251,8 +254,9 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 
 		// Can only happen for directories
 		if (protocolinfo != null) {			
-			//final String streamUrl = HeimklangServiceRegistry.getContentServerBase() + "/sample.mp3";
-			dObj.addResource(new Res(protocolinfo, filedObject.length(), filedObject.getAbsoluteFile().toURI().toString()));
+			// We add the file extension to help jetty infer the mimetype mostly 
+			final String streamUrl = HeimklangServiceRegistry.getContentServerBase() + "/" + dObj.getId() + "."+ getFileExtension(filedObject);
+			dObj.addResource(new Res(protocolinfo, filedObject.length(), streamUrl));
 		}
 		return dObj;
 	}
@@ -270,7 +274,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		if (mimeTypeStr == null) {
 			final String ext = getFileExtension(child);
 			if (ext != null) {
-				mimeTypeStr = extensionMimetype.get(ext);
+				mimeTypeStr = fileExtensionMimeTypes.getMimeByExtension(mimeTypeStr);
 			}
 		}
 		
@@ -281,7 +285,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		return mimeTypeStr;
 	}
 	
-	private static String getFileExtension(File child) {
+	public static String getFileExtension(File child) {
 	    final String fileName = child.getName();
 	    final int lastIndex = fileName.lastIndexOf('.');
 	    if (lastIndex > 0 && lastIndex < fileName.length() - 1) { // dot not at start or end
@@ -296,7 +300,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		return BASE64ENCODER.encodeToString(fileObject.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
 	}
 	
-	private static File decodeItemId(String objectId) {
+	public static File decodeItemId(String objectId) {
 		return new File(new String(BASE64DECODER.decode(objectId), StandardCharsets.UTF_8));
 	}
 	

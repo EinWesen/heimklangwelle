@@ -38,6 +38,7 @@ import org.jupnp.transport.spi.StreamServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.einwesen.heimklangwelle.contentdirectory.ContentByIdServlet;
 import de.einwesen.heimklangwelle.contentdirectory.ContentDirectoryServiceImpl;
 import de.einwesen.heimklangwelle.contentdirectory.MediaServerConnectionManagerServiceImpl;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
@@ -152,20 +153,22 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 
 	public LocalDevice registerLocalContentServerDevice() throws ValidationException, IOException {
 		
-		final String sourceDir = System.getProperty("user.dir");
+		final String sourceDir = System.getProperty("user.dir"); 
 
 		// 1. Create the ServletHolder (Jetty's wrapper for servlets)
-		ServletHolder staticHolder = new ServletHolder(new DefaultServlet());
+		ServletHolder staticHolder = new ServletHolder(new ContentByIdServlet());
 
 		// 2. Point it to your files (can be a folder on disk or in your JAR)
+		// DOesn't matter, the way we create resources, but the dervlet need the parameters
 		staticHolder.setInitParameter("resourceBase", sourceDir);
 
 		// 3. (Optional) Recommended settings for sub-path serving
-		staticHolder.setInitParameter("pathInfoOnly", "true"); // Ensures correct file lookups
-		staticHolder.setInitParameter("dirAllowed", "true"); // Security: disable directory browsing
+		staticHolder.setInitParameter("pathInfoOnly", "false"); // Ensures correct file lookups
+		staticHolder.setInitParameter("dirAllowed", "false"); // Security: disable directory browsing
 
 		// 4. Register it at a specific path
 		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+		servletHandler.setMimeTypes(ContentDirectoryServiceImpl.fileExtensionMimeTypes);
 		servletHandler.setContextPath("/heimklang/welle");
 		servletHandler.addServlet(staticHolder, "/*");
 
