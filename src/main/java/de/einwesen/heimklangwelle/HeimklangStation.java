@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
+import de.einwesen.heimklangwelle.renderers.DummyWrapperImpl;
 import de.einwesen.heimklangwelle.renderers.MPVRendererWrapper;
 
 public class HeimklangStation {
@@ -23,7 +24,7 @@ public class HeimklangStation {
         	instance = this;
         	
         	LOGGER.info("Initializing renderer...");
-        	this.rendererInstance = new MPVRendererWrapper();        	
+        	this.rendererInstance = initRenderer();        	
             
         	LOGGER.info("Initializing service registry...");
         	this.serviceRegistry = HeimklangServiceRegistry.getInstance();
@@ -34,6 +35,19 @@ public class HeimklangStation {
         } else {
         	throw new IllegalStateException("There may only be one serviceInstance");
         }
+    }
+    
+    private static AbstractRendererWrapper initRenderer() {
+    	try {
+			return new MPVRendererWrapper();
+		} catch (Throwable e) {
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.error("Failed to initialize renderer", e.toString());								
+			} else {
+				LOGGER.error("Failed to initialize renderer: " + e.toString());
+			}
+			return new DummyWrapperImpl();
+		}
     }
     
     public void shutdown() {
