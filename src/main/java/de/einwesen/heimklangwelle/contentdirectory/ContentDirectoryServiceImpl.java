@@ -13,8 +13,6 @@ import java.util.Base64.Encoder;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jupnp.model.types.ErrorCode;
-import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.contentdirectory.AbstractContentDirectoryService;
 import org.jupnp.support.contentdirectory.ContentDirectoryErrorCode;
 import org.jupnp.support.contentdirectory.ContentDirectoryException;
@@ -84,7 +82,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 						StorageSystem rootContainer = new StorageSystem();
 						rootContainer.setId("0");
 						rootContainer.setParentID("-1"); // no parent
-						rootContainer.setTitle(File.separator+File.separator);
+						rootContainer.setTitle(cleanTitle("SystemRoots"));
 						rootContainer.setRestricted(true);
 						rootContainer.setSearchable(false);
 						rootContainer.setChildCount(File.listRoots().length);
@@ -95,7 +93,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 							StorageVolume  driveContainer = new StorageVolume();						
 							driveContainer.setId(encodeItemId(drive));
 							driveContainer.setParentID("0");
-							driveContainer.setTitle(drive.getAbsolutePath());
+							driveContainer.setTitle(cleanTitle(drive.getAbsolutePath()));
 							driveContainer.setRestricted(true);
 							driveContainer.setSearchable(false);
 							driveContainer.setChildCount(getChildCount(drive));
@@ -122,10 +120,13 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 								final File[] children = requestedObject.listFiles();
 								if (children != null) {
 									for (File child : children) {
-										final DIDLObject typedDIDLObject = getTypedDIDLObject(child);
-										if (typedDIDLObject != null) {
-											didlObjects.add(typedDIDLObject);										
-										}											
+										if (!child.isHidden()) {
+											final DIDLObject typedDIDLObject = getTypedDIDLObject(child);
+											if (typedDIDLObject != null) {
+												didlObjects.add(typedDIDLObject);										
+											}
+											
+										}
 									}																	
 								}
 							} else {
@@ -184,7 +185,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		final File[] children = parent.listFiles();
 		if (children != null) {
 			for (File child : children) {
-				if (child.canRead()) {
+				if (child.canRead() && !child.isHidden()) {
 					if (child.isDirectory()) {
 						count += 1;
 					} else {
@@ -205,7 +206,11 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 			final StorageFolder folder =  new StorageFolder();
 			folder.setSearchable(false);
 			folder.setChildCount(getChildCount(fileObject));
-			return updateTypedObject(folder, fileObject, null);				
+			if (folder.getChildCount().intValue()>0) {
+				return updateTypedObject(folder, fileObject, null);				
+			} else {
+				return null;
+			}
 		}
 		
 		final String mimeTypeStr = getMimetype(fileObject);
@@ -241,7 +246,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 		} else {
 			dObj.setParentID("0");
 		}
-		dObj.setTitle(filedObject.getName());
+		dObj.setTitle(cleanTitle(filedObject.getName()));
 		dObj.setRestricted(true);
 
 		// Can only happen for directories
@@ -285,8 +290,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 	    	return null;	    	
 	    }
 	}
-	
-	
+		
 	private static String encodeItemId(File fileObject) {		
 		// I used just teh absolute path before, and it worked semantically, but some device reject obcect with ids that contain : or \ it seems
 		return BASE64ENCODER.encodeToString(fileObject.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
@@ -294,5 +298,10 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 	
 	private static File decodeItemId(String objectId) {
 		return new File(new String(BASE64DECODER.decode(objectId), StandardCharsets.UTF_8));
+	}
+	
+	private static String cleanTitle(String s) {
+		// At least some unnamed vendor devices has problems when this character is in a title
+		return s.replace("\\", "");
 	}
 }
