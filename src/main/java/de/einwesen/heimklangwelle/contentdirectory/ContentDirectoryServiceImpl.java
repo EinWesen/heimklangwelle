@@ -5,12 +5,16 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jupnp.model.types.ErrorCode;
+import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.contentdirectory.AbstractContentDirectoryService;
 import org.jupnp.support.contentdirectory.ContentDirectoryErrorCode;
 import org.jupnp.support.contentdirectory.ContentDirectoryException;
@@ -68,11 +72,8 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 	public BrowseResult browse(String objectID, BrowseFlag browseFlag, String filter, long firstResult, long maxResults,
 			SortCriterion[] orderby) throws ContentDirectoryException {
 
-		DIDLContent didl = new DIDLContent();
-
 		try {
-			
-
+			ArrayList<DIDLObject> didlObjects = new ArrayList<>();
 			LOGGER.trace("%s \"%s\" (%s) %d - %d".formatted(browseFlag, objectID, filter, firstResult, maxResults));			
 			
 			// root container
@@ -87,7 +88,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 						rootContainer.setRestricted(true);
 						rootContainer.setSearchable(false);
 						rootContainer.setChildCount(File.listRoots().length);
-						didl.addContainer(rootContainer);				
+						didlObjects.add(rootContainer);
 						break;
 					case DIRECT_CHILDREN: // Return children
 						for (File drive : File.listRoots()) {
@@ -98,7 +99,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 							driveContainer.setRestricted(true);
 							driveContainer.setSearchable(false);
 							driveContainer.setChildCount(getChildCount(drive));
-							didl.addContainer(driveContainer);        		
+							didlObjects.add(driveContainer);        		
 						}											
 						break;
 				default:
@@ -114,7 +115,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 					
 					switch (browseFlag) {
 						case METADATA:					
-							didl.addObject(getTypedDIDLObject(requestedObject));
+							didlObjects.add(getTypedDIDLObject(requestedObject));
 							break;
 						case DIRECT_CHILDREN:
 							if (requestedObject.isDirectory()) { 
@@ -123,8 +124,8 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 									for (File child : children) {
 										final DIDLObject typedDIDLObject = getTypedDIDLObject(child);
 										if (typedDIDLObject != null) {
-											didl.addObject(typedDIDLObject);										
-										}
+											didlObjects.add(typedDIDLObject);										
+										}											
 									}																	
 								}
 							} else {
@@ -135,19 +136,38 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 							throw new IllegalArgumentException("browseFlag = " + browseFlag);
 					}
 					
-					changeSystemUpdateID();
-					
-					
-					
 				} else {
 					throw new ContentDirectoryException(ContentDirectoryErrorCode.NO_SUCH_OBJECT, objectID);
 				}
 				
 			}
 
-			final String xml = new DIDLParser().generate(didl);
-			System.out.println(didl.getCount());
-			return new org.jupnp.support.model.BrowseResult(xml, didl.getCount(), didl.getCount());
+			if (firstResult < didlObjects.size()) {
+				
+				if (didlObjects.size() > 1) {
+					// We sort for convinience, but also need predictabel order for paging
+					
+					//TODO: Needs to take locale into account 
+					didlObjects.sort(new Comparator<DIDLObject>() {
+						@Override
+						public int compare(DIDLObject o1, DIDLObject o2) {
+							return o1.getTitle().compareTo(o2.getTitle());
+						}				
+					});
+				}
+				
+				DIDLContent didl = new DIDLContent();
+				final int maxEntry = Long.valueOf(Math.max(Math.min(firstResult + maxResults, didlObjects.size()),1)).intValue();
+				for (DIDLObject dObj : didlObjects.subList(Long.valueOf(firstResult).intValue(), maxEntry)) {
+					didl.addObject(dObj);					
+				}
+				
+				final String xml = new DIDLParser().generate(didl);
+				return new org.jupnp.support.model.BrowseResult(xml, didl.getCount(), didlObjects.size());
+				
+			} else {
+				throw new IllegalArgumentException("firstresult > childCount ("+didlObjects.size()+")");
+			}
 		
 		} catch (ContentDirectoryException c) {
 			throw c;
@@ -185,7 +205,7 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 			final StorageFolder folder =  new StorageFolder();
 			folder.setSearchable(false);
 			folder.setChildCount(getChildCount(fileObject));
-			return updateTypedObject(folder, fileObject, null);
+			return updateTypedObject(folder, fileObject, null);				
 		}
 		
 		final String mimeTypeStr = getMimetype(fileObject);
