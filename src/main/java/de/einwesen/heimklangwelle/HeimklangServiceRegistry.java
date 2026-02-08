@@ -2,6 +2,8 @@ package de.einwesen.heimklangwelle;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -160,7 +162,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 
 		// 3. (Optional) Recommended settings for sub-path serving
 		staticHolder.setInitParameter("pathInfoOnly", "true"); // Ensures correct file lookups
-		staticHolder.setInitParameter("dirAllowed", "false"); // Security: disable directory browsing
+		staticHolder.setInitParameter("dirAllowed", "true"); // Security: disable directory browsing
 
 		// 4. Register it at a specific path
 		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
@@ -184,7 +186,13 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 
         DeviceDetails details = new DeviceDetails(
         		HeimklangStation.class.getPackageName() + " " +  type.getDisplayString(),
-                new ManufacturerDetails("https://github.com/EinWesen")
+                new ManufacturerDetails("https://github.com/EinWesen"),
+                new ModelDetails(
+                		ContentDirectoryServiceImpl.class.getName(),
+                		"No transcoding support",
+                		"?" // FIXME: commit version Version                        
+                		), newURI(this.contentServerBase)
+                
         );
         
         final AnnotationLocalServiceBinder annotationBinder = new FilteredAnnotationLocalServiceBinderImpl();
@@ -209,6 +217,14 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         );
         this.upnpService.getRegistry().addDevice(device);
         return device;		
+	}
+	
+	private static URI newURI(String uri) {
+		try {
+			return new URI(uri);
+		} catch (URISyntaxException e) {
+			return null;
+		}
 	}
 	
 	@Override
