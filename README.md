@@ -13,7 +13,7 @@ What i do have however is a RasberryPI, that does have one. Then i had the idea 
 Is this best way to solve that problem? - Of course not! There are so many easier ways, to do this. Ranging from copying the files on the rasberry, using my phone instead, or just simply buying a cheap bluetooth dongle. Not to mention that most people just don't really use local media anymore in the first place. Including me. But it seemed liek a fun little project.
 
 ## Features / TODO
-- [ ] Basic infrastruture
+- [x] Basic infrastruture
     - [x] Implement UPNP Services/Discovery 
     - [ ] Provide basic Webserver for Controlpoint WebUI
 - [x] Mediarenderer
@@ -23,9 +23,9 @@ Is this best way to solve that problem? - Of course not! There are so many easie
 - [ ] Controlpoint
     - [ ] Implement backend to handle UPNP-communication with mediaservers
     - [ ] Implement WebPlayer UI
-- [ ] Mediaserver
-    - [ ] Implement mediaserver service infrastruture
-    - [ ] Implement the actual contentsearch (on disk) and serving
+- [x] Mediaserver
+    - [x] Implement mediaserver service infrastruture
+    - [x] Implement the actual contentlisting (on disk) and serving
 
 ## Acknowlegements
 This would not be possible without these: 
@@ -34,3 +34,5 @@ This would not be possible without these:
 
 ## Other good stuff
 The [Serviio](https://serviio.org) media server has worked really well for me in he past.
+
+[eezUPnP](https://www.eezupnp.de) is not only a really good controler, that allowed me to use my renderer as soon as it was ready, nut as also immensly helpful during developement of the same (and the media server as well).
