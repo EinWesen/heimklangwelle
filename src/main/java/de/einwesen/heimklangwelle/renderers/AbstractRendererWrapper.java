@@ -53,7 +53,6 @@ public abstract class AbstractRendererWrapper {
     protected void setPlayerStateAndFire(TransportState state) {
     	if (this.playerState != state) {    		
     		LOGGER.debug("fire!:" + state);
-    		System.out.println("fore:" +  state);
     		this.playerState = state;
     		this.firePlayerStateChangedEvent();
     	}
