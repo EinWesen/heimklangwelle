@@ -6,10 +6,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
 
+import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.binding.annotations.AnnotationLocalServiceBinder;
+import org.jupnp.controlpoint.SubscriptionCallback;
 import org.jupnp.model.DefaultServiceManager;
 import org.jupnp.model.ServiceManager;
 import org.jupnp.model.UnsupportedDataException;
@@ -40,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import de.einwesen.heimklangwelle.contentdirectory.ContentByIdServlet;
 import de.einwesen.heimklangwelle.contentdirectory.ContentDirectoryServiceImpl;
 import de.einwesen.heimklangwelle.contentdirectory.MediaServerConnectionManagerServiceImpl;
+import de.einwesen.heimklangwelle.controller.rest.DevicesEndpointServlet;
+import de.einwesen.heimklangwelle.controller.rest.RendererEndpointServlet;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.renderers.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.renderers.RendererConnectionManagerServiceImpl;
@@ -156,17 +161,19 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 
 		// 1. Create the ServletHolder (Jetty's wrapper for servlets)
 		ServletHolder staticHolder = new ServletHolder(new ContentByIdServlet());
+		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
 
 		// 2. Point it to your files (can be a folder on disk or in your JAR)
 		// DOesn't matter, the way we create resources, but the dervlet need the parameters
-		staticHolder.setInitParameter("resourceBase", sourceDir);
+		servletHandler.setBaseResource(new ResourceCollection(new String[] {
+				HeimklangStation.class.getResource("/webapp/welle").toExternalForm()
+		}));	
 
 		// 3. (Optional) Recommended settings for sub-path serving
 		staticHolder.setInitParameter("pathInfoOnly", "false"); // Ensures correct file lookups
 		staticHolder.setInitParameter("dirAllowed", "false"); // Security: disable directory browsing
 
 		// 4. Register it at a specific path
-		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
 		servletHandler.setMimeTypes(ContentDirectoryServiceImpl.fileExtensionMimeTypes);
 		servletHandler.setContextPath("/heimklang/welle");
 		servletHandler.addServlet(staticHolder, "/*");
@@ -221,6 +228,46 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         return device;		
 	}
 	
+	
+	public void registerLocalController() throws IOException {
+		
+		final ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+		servletHandler.setContextPath("/heimklang");
+        
+        // --- Register servlets ---
+        // Devices listing
+		servletHandler.addServlet(new ServletHolder(new DevicesEndpointServlet()), "/rest/devices");
+
+        // Renderer control & events
+		servletHandler.addServlet(new ServletHolder(new RendererEndpointServlet()), "/rest/renderer/*");
+
+        // Content directory browsing
+		//servletHandler.addServlet(new ServletHolder(new ContentDirectoryServlet()), "/rest/contentdirectory/*/browse");
+
+		// Web content
+		ServletHolder staticHolder = new ServletHolder(new DefaultServlet());
+
+		servletHandler.setBaseResource(new ResourceCollection(new String[] {
+        	HeimklangStation.class.getResource("/webapp").toExternalForm()
+        }));		
+
+		// 2. (Optional) Recommended settings for sub-path serving
+		staticHolder.setInitParameter("pathInfoOnly", "true"); // Ensures correct file lookups
+		staticHolder.setInitParameter("dirAllowed", "false"); // Security: disable directory browsing		
+		servletHandler.addServlet(staticHolder, "/*");
+		
+		// 3. register with server 
+		jettyServer.registerHandler(servletHandler);	
+		
+		// 4. Register addional port
+		final int port = jettyServer.addConnector(null, 7777);
+
+		final Iterator<InetAddress> it = this.upnpService.getConfiguration().createNetworkAddressFactory().getBindAddresses();
+		final InetAddress addr = it.hasNext() ? it.next() : InetAddress.getLocalHost();
+						
+		LOGGER.info("Added Jetty connector for web ui at %s/".formatted(addr.getHostAddress() + ":" + port));
+	}
+	
 	private static URI newURI(String uri) {
 		try {
 			return new URI(uri);
@@ -233,13 +280,20 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 	public void startup() {
 		super.startup();
 	}
-
+	
+	
+	
 	public static HeimklangServiceRegistry getInstance() {
     	return instance;
     }
 
 	public static String getContentServerBase() {
 		return instance.contentServerBase;
+	}
+	
+	public SubscriptionCallback registerCallback(SubscriptionCallback callback) {
+		upnpService.getControlPoint().execute(callback);
+		return callback;
 	}
 	
 }

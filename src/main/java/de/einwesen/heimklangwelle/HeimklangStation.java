@@ -31,6 +31,7 @@ public class HeimklangStation {
         	this.serviceRegistry.startup();
             this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);
             this.serviceRegistry.registerLocalContentServerDevice();
+            this.serviceRegistry.registerLocalController();
             
         } else {
         	throw new IllegalStateException("There may only be one serviceInstance");

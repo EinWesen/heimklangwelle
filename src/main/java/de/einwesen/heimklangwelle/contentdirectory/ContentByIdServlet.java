@@ -32,19 +32,24 @@ public class ContentByIdServlet extends DefaultServlet {
 	@Override
 	public Resource getResource(String pathInContext) {
 				
-		File fileToServe = null;
-		
-		try {
-			fileToServe = decodeItemIdPath(pathInContext);			
-		} catch (Throwable t) {
-			LOGGER.warn("Could not decode item '" + pathInContext + "'", t);
+		if (pathInContext.equals("/") || pathInContext.equalsIgnoreCase("index.html")) {
+			return super.getResource(pathInContext);
+		} else {
+			File fileToServe = null;
+			
+			try {
+				fileToServe = decodeItemIdPath(pathInContext);			
+			} catch (Throwable t) {
+				LOGGER.warn("Could not decode item '" + pathInContext + "'", t);
+			}
+			
+			if (fileToServe != null) {
+				return Resource.newResource(fileToServe);			
+			}			
+			
+			return null;
 		}
 		
-		if (fileToServe != null) {
-			return Resource.newResource(fileToServe);			
-		}
-		
-		return null;
 	}
 
 	@Override

@@ -1,9 +1,11 @@
 package de.einwesen.heimklangwelle.upnpsupport;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceConfiguration;
@@ -21,7 +23,7 @@ public class UpnpServiceRegistry {
 	private final static Logger LOGGER = LoggerFactory.getLogger(UpnpServiceRegistry.class);
 	
 	@SuppressWarnings("rawtypes")
-	private final Map<String, Device> registeredRenderers = Collections.synchronizedMap(new HashMap<>());
+	private final Map<String, Device> registeredMediaDevices = Collections.synchronizedMap(new HashMap<>());
 	
 	private final RegistryListener registryListener = new RegistryListener() {
 
@@ -39,7 +41,7 @@ public class UpnpServiceRegistry {
 	    public void remoteDeviceAdded(Registry registry, RemoteDevice device) {
 	    	if (device.getType().getType().startsWith("Media")) {    		
 	    		LOGGER.debug("Remote device available: " + device.getType().getDisplayString() + " - " + device.getDisplayString());    			    		
-                updateDeviceCache(true, device, registeredRenderers);
+                updateDeviceCache(true, device, registeredMediaDevices);
 	    	} else {
 	    		LOGGER.trace("Remote device available: " + device.getType().getDisplayString() + " - " + device.getDisplayString());
 	    	}
@@ -49,7 +51,7 @@ public class UpnpServiceRegistry {
 	    public void remoteDeviceRemoved(Registry registry, RemoteDevice device) {
 	    	if (device.getType().getType().startsWith("Media")) {    		
 	    		LOGGER.debug("Remote device removed: " + device.getType().getDisplayString() + " - " + device.getDisplayString());
-	    		updateDeviceCache(false, device, registeredRenderers);
+	    		updateDeviceCache(false, device, registeredMediaDevices);
 	    	} else {
 	    		LOGGER.trace("Remote device removed: " + device.getType().getDisplayString() + " - " + device.getDisplayString());
 	    	}
@@ -63,19 +65,19 @@ public class UpnpServiceRegistry {
 	    @Override
 	    public void localDeviceAdded(Registry registry, LocalDevice device) {
 	    	LOGGER.info("Local device available: " + device.getType().getDisplayString() + " - " + device.getDisplayString());
-	    	updateDeviceCache(true, device, registeredRenderers);
+	    	updateDeviceCache(true, device, registeredMediaDevices);
 	    }
 	
 	    @Override
 	    public void localDeviceRemoved(Registry registry, LocalDevice device) {
 	    	LOGGER.info("Local device removed: " + device.getType().getDisplayString() + " - " + device.getDisplayString());
-	    	updateDeviceCache(false, device, registeredRenderers);
+	    	updateDeviceCache(false, device, registeredMediaDevices);
 	    }
 	
 	    @Override
 	    public void beforeShutdown(Registry registry) {
 	    	LOGGER.info("Before shutdown, the registry has devices: " + registry.getDevices().size());
-	    	registeredRenderers.clear();
+	    	registeredMediaDevices.clear();
 	    }
 	
 	    @Override
@@ -100,20 +102,26 @@ public class UpnpServiceRegistry {
 	private void updateDeviceCache(boolean add, Device device, Map<String, Device> deviceCache) {
 		final String identifierString = device.getIdentity().getUdn().getIdentifierString();
 		
-		if (device.getType().getType().startsWith("MediaRenderer")) {
+		if (device.getType().getType().startsWith("Media")) {
 			if (add) {
-				registeredRenderers.put(identifierString, device);
+				registeredMediaDevices.put(identifierString, device);
 			} else {					
-				registeredRenderers.remove(identifierString);
+				registeredMediaDevices.remove(identifierString);
 			}
 		}
 	}
     
-    public List<String[]> getKownRendererInfo()    {    	
-    	return this.registeredRenderers.entrySet().stream().map((entry) -> new String[] {entry.getKey(), entry.getValue().getDetails().getFriendlyName() }).toList();
-    }
+    @SuppressWarnings("rawtypes")
+	public Collection<Device> getRegisteredMediaDevices() {
+		return new ArrayList<>(registeredMediaDevices.values());
+	}
+    
+	@SuppressWarnings("rawtypes")
+	public Device getRegisteredMediaDevice(final String udn) throws NoSuchElementException {
+		return this.registeredMediaDevices.get(udn);
+	}    
 
-    public void shutdown() {
+	public void shutdown() {
     	this.upnpService.shutdown();
     }
 	

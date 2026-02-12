@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Heimklang Test Interface</title>
+<style>
+    body { font-family: sans-serif; padding: 20px; }
+    #devices, #controls, #events { margin-bottom: 20px; }
+    .device { cursor: pointer; margin: 5px 0; text-decoration: underline;color:#0066cc;}
+    #eventOutput { white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    button { margin: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Heimklang Test Interface</h1>
+
+<div id="devices">
+    <h2>Devices</h2>
+    <button onclick="loadDevices()">Refresh Devices</button>
+    <ul id="deviceList"></ul>
+</div>
+
+<div id="controls">
+    <h2>Player Controls</h2>
+    <div id="controlButtons">
+        <em>Select a device to enable controls</em>
+    </div>
+</div>
+
+<div id="events">
+    <h2>Events</h2>
+    <div id="eventOutput"></div>
+</div>
+
+<script>
+let currentEventSource = null;
+let currentUdn = null;
+
+function loadDevices() {
+    fetch('../rest/devices')
+        .then(resp => resp.json())
+        .then(devices => {
+            const list = document.getElementById('deviceList');
+            list.innerHTML = '';
+            devices.forEach(device => {
+                const li = document.createElement('li');
+                li.className = 'device';
+                li.textContent = device.friendlyName + ' (' + device.udn + ')';
+                li.onclick = () => selectDevice(device.udn);
+                list.appendChild(li);
+            });
+        })
+        .catch(err => alert('Error loading devices: ' + err));
+}
+
+function selectDevice(udn) {
+    currentUdn = udn;
+    subscribeToEvents(udn);
+    setupControls(udn);
+}
+
+function subscribeToEvents(udn) {
+    if (currentEventSource) {
+        currentEventSource.close();
+        document.getElementById('eventOutput').innerHTML = '';
+    }
+
+    const url = '../rest/renderer/' + encodeURIComponent(udn) + '/subscribe';
+    currentEventSource = new EventSource(url);
+
+    currentEventSource.onmessage = (event) => {
+        const out = document.getElementById('eventOutput');
+        try {
+            const obj = JSON.parse(event.data);
+            out.textContent += JSON.stringify(obj, null, 2) + '\n';
+        } catch (e) {
+            out.textContent += event.data + '\n';
+        }
+        out.scrollTop = out.scrollHeight;
+    };
+
+    currentEventSource.onerror = (err) => {
+        console.error('EventSource error:', err);
+        currentEventSource.close();
+    };
+}
+
+function setupControls(udn) {
+    const container = document.getElementById('controlButtons');
+    container.innerHTML = '';
+
+    const actions = [
+        { name: 'Play', action: 'play' },
+        { name: 'Pause', action: 'pause' },
+        { name: 'Stop', action: 'stop' },
+        { name: 'Next', action: 'next' },
+        { name: 'Previous', action: 'previous' }
+    ];
+
+    actions.forEach(a => {
+        const btn = document.createElement('button');
+        btn.textContent = a.name;
+        btn.onclick = () => sendAction(udn, a.action);
+        container.appendChild(btn);
+    });
+}
+
+function sendAction(udn, action) {
+    const url = '/rest/renderer/' + encodeURIComponent(udn) + '/' + encodeURIComponent(action);
+    fetch(url, { method: 'POST' })
+        .then(resp => {
+            if (!resp.ok) throw new Error('Action failed: ' + resp.status);
+            console.log('Action sent:', action);
+        })
+        .catch(err => alert(err));
+}
+
+// auto-load devices on page load
+loadDevices();
+</script>
+
+</body>
+</html>
