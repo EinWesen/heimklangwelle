@@ -108,6 +108,9 @@
 	                </resource>
 	                <resource>
 	                  <directory>${project.basedir}/src/test/resources/</directory>
+	                  <excludes>
+	                  	<exclude>logback-test.xml</exclude>
+	                  </excludes>
 	                  <filtering>false</filtering>
 	                </resource>	                
 					<resource>
