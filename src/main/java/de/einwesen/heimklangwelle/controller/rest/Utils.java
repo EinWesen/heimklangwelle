@@ -47,14 +47,16 @@ public class Utils {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static JSONArray getActionListArray(Service serviceObj) {
+	public static JSONArray getActionListArray(Service serviceObj, boolean setService) {
 		final JSONArray jsonActions = new JSONArray();
 
 		if (serviceObj != null) {
 			for (Action actionCall : serviceObj.getActions()) {
 				
 				final JSONObject jsonAction = new JSONObject();
-				jsonAction.put("service", serviceObj.getServiceType().toFriendlyString());
+				if (setService) {
+					jsonAction.put("service", serviceObj.getServiceType().toFriendlyString());					
+				}
 				jsonAction.put("name", actionCall.getName());
 				
 				final JSONArray jsonArguments = new JSONArray();

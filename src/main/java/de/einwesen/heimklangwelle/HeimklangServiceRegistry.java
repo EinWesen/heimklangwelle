@@ -236,7 +236,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         
         // --- Register servlets ---
         // Devices listing
-		servletHandler.addServlet(new ServletHolder(new DevicesEndpointServlet()), "/rest/devices");
+		servletHandler.addServlet(new ServletHolder(new DevicesEndpointServlet()), "/rest/devices/*");
 
         // Renderer control & events
 		servletHandler.addServlet(new ServletHolder(new RendererEndpointServlet()), "/rest/renderer/*");

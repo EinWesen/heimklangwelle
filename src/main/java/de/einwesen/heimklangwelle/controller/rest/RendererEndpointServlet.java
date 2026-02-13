@@ -197,13 +197,13 @@ public class RendererEndpointServlet extends HttpServlet {
 		jsonResponse.put("actions", jsonActions);
 
 		try {
-			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("AVTransport"))));			
+			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("AVTransport")), true));			
 		} catch (Throwable t) {
 			LOGGER.warn("Error listing actions", t);
 		}
 		
 		try {
-			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("RenderingControl"))));
+			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("RenderingControl")), true));
 		} catch (Throwable t) {
 			LOGGER.warn("Error listing actions", t);
 		}
