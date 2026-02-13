@@ -55,7 +55,7 @@ public class Utils {
 				
 				final JSONObject jsonAction = new JSONObject();
 				if (setService) {
-					jsonAction.put("service", serviceObj.getServiceType().toFriendlyString());					
+					jsonAction.put("serviceId", serviceObj.getServiceType().toFriendlyString());					
 				}
 				jsonAction.put("name", actionCall.getName());
 				
