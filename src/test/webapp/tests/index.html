@@ -21,12 +21,13 @@
     <ul id="deviceList"></ul>
 </div>
 
-<div id="controls">
-    <h2>Player Controls</h2>
-    <div id="controlButtons">
-        <em>Select a device to enable controls</em>
-    </div>
+<div id="services">
+    <h2>Services</h2>
+    <ul id="serviceList">
+		<li>Select device to see services</li>
+	</ul>
 </div>
+
 
 <div id="events">
     <h2>Events</h2>
@@ -38,56 +39,123 @@ let currentEventSource = null;
 let currentUdn = null;
 
 function loadDevices() {
-    fetch('../rest/devices')
+    fetch('../rest/devices/')
         .then(resp => resp.json())
-        .then(devices => {
+        .then(deviceResponse => {
             const list = document.getElementById('deviceList');
             list.innerHTML = '';
-            devices.forEach(device => {
+			deviceResponse.devices.forEach(device => {
                 const li = document.createElement('li');
                 li.className = 'device';
                 li.textContent = device.friendlyName + ' (' + device.udn + ')';
-                li.onclick = () => selectDevice(device.udn);
+                li.onclick = () => selectDevice(device.udn, device.type);
                 list.appendChild(li);
             });
         })
         .catch(err => alert('Error loading devices: ' + err));
 }
 
-function selectDevice(udn) {
+function selectDevice(udn, deviceType) {
     currentUdn = udn;
-    subscribeToEvents(udn);
-    setupControls(udn);
+	loadServices();
+    subscribeToEvents(udn, deviceType);
+    //setupControls(udn);
 }
 
-function subscribeToEvents(udn) {
+function loadServices() {
+    fetch('../rest/devices/'+ encodeURIComponent(currentUdn), { method: 'GET' })
+        .then(resp => resp.json())
+        .then(device => {
+            const list = document.getElementById('serviceList');
+            list.innerHTML = '';
+            device.services.forEach(service => {                
+				
+				if (service.type.includes('schemas-upnp-org:')) {
+				
+					const serviceLi = document.createElement('li');
+	                serviceLi.className = 'service';
+					serviceLi.appendChild(document.createElement('div')).textContent = service.id + ' (' + service.type + ')';
+	                //li.onclick = () => selectDevice(device.udn);
+					
+					let isContentServer = service.type.includes('schemas-upnp-org:ContentDirectory'),
+						isRenderControl = service.type.includes('schemas-upnp-org:RenderingControl'),
+						isTransport = service.type.includes('schemas-upnp-org:AVTransport');
+				
+					const actionDiv = serviceLi.appendChild(document.createElement('div'));
+					const actionList = actionDiv.appendChild(document.createElement('ul'));
+					
+					service.actions.forEach(action => {
+						const actionLi = actionList.appendChild(document.createElement('li'));
+						actionLi.className = 'action';
+						
+						if (action.arguments.length == 1 && !isContentServer) {
+							const btn = actionLi.appendChild(document.createElement('button'));
+							btn.textContent = action.name;
+						} else {
+							actionLi.appendChild(document.createElement('span')).textContent = action.name;							
+						}
+						
+						actionLi.appendChild(document.createElement('span')).textContent = ' : ';
+						actionLi.appendChild(document.createElement('i')).textContent = JSON.stringify(action.arguments);
+					});
+									
+	                list.appendChild(serviceLi);
+				}
+            });
+        })
+        .catch(err => alert('Error loading services: ' + err));
+}
+
+
+
+function subscribeToEvents(udn, deviceType) {
     if (currentEventSource) {
         currentEventSource.close();
         document.getElementById('eventOutput').innerHTML = '';
     }
 
-    const url = '../rest/renderer/' + encodeURIComponent(udn) + '/subscribe';
-    currentEventSource = new EventSource(url);
-
-    currentEventSource.onmessage = (event) => {
-        const out = document.getElementById('eventOutput');
-        try {
-            const obj = JSON.parse(event.data);
-            out.textContent += JSON.stringify(obj, null, 2) + '\n';
-        } catch (e) {
-            out.textContent += event.data + '\n';
-        }
-        out.scrollTop = out.scrollHeight;
-    };
-
-    currentEventSource.onerror = (err) => {
-        console.error('EventSource error:', err);
-        currentEventSource.close();
-    };
+	if (deviceType == 'MediaRenderer') {
+	    const url = '../rest/renderer/' + encodeURIComponent(udn) + '/subscribe';
+	    currentEventSource = new EventSource(url);
+	
+	    currentEventSource.onmessage = (event) => {
+	        const out = document.getElementById('eventOutput');
+	        try {
+	            const obj = JSON.parse(event.data);
+	            out.textContent += JSON.stringify(obj, null, 2) + '\n';
+	        } catch (e) {
+	            out.textContent += event.data + '\n';
+	        }
+	        out.scrollTop = out.scrollHeight;
+	    };
+	
+	    currentEventSource.onerror = (err) => {
+	        console.error('EventSource error:', err);
+	        currentEventSource.close();
+	    };		
+	}
 }
 
 function setupControls(udn) {
-    const container = document.getElementById('controlButtons');
+	
+	const url = '../rest/renderer/' + encodeURIComponent(udn) + '/action';
+	fetch(url, { method: 'GET' })
+	    .then(resp => resp.json())
+		.then(data => {
+			data.actions.forEach(a => {
+			    const btn = document.createElement('button');
+			    btn.textContent = a.name;
+			    btn.onclick = () => sendAction(udn, a.action);
+			    container.appendChild(btn);
+			});
+			
+						
+			console.log(data);
+		})
+	    .catch(err => alert(err));
+		
+			
+/*    const container = document.getElementById('controlButtons');
     container.innerHTML = '';
 
     const actions = [
@@ -104,10 +172,10 @@ function setupControls(udn) {
         btn.onclick = () => sendAction(udn, a.action);
         container.appendChild(btn);
     });
-}
+*/}
 
 function sendAction(udn, action) {
-    const url = '/rest/renderer/' + encodeURIComponent(udn) + '/' + encodeURIComponent(action);
+    const url = '/rest/renderer/' + encodeURIComponent(udn) + '/action';
     fetch(url, { method: 'POST' })
         .then(resp => {
             if (!resp.ok) throw new Error('Action failed: ' + resp.status);
