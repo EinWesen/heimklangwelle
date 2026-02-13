@@ -19,16 +19,13 @@ public class DevicesEndpointServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         final JSONArray devicesJson = new JSONArray();
         for (@SuppressWarnings("rawtypes")Device device : HeimklangServiceRegistry.getInstance().getRegisteredMediaDevices()) {
-            JSONObject dev = new JSONObject();
+            final JSONObject dev = new JSONObject();
             dev.put("udn", device.getIdentity().getUdn().getIdentifierString());
             dev.put("friendlyName", device.getDetails().getFriendlyName());
             dev.put("type", device.getType().getType());
             devicesJson.put(dev);
         }
 
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-        resp.getWriter().write(devicesJson.toString());
-        resp.flushBuffer();
+        Utils.sendJSON(null, resp);
     }
 }

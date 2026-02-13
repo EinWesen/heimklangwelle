@@ -1,7 +1,9 @@
 package de.einwesen.heimklangwelle.controller.rest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,6 +18,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.util.IO;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.jupnp.controlpoint.SubscriptionCallback;
 import org.jupnp.model.gena.GENASubscription;
 import org.jupnp.model.meta.Device;
@@ -32,39 +38,55 @@ public class RendererEndpointServlet extends HttpServlet {
 	private static final Logger LOGGER = LoggerFactory.getLogger(RendererEndpointServlet.class);
 
 	private static final long serialVersionUID = 3678093008074765231L;
-
-	@Override
+	
+    @Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		if (req.getPathInfo().endsWith("/subscribe")) {
 			_doStreamEventSubscription(req, resp);
+		} else if (req.getPathInfo().endsWith("/action")) {
+			_doGetActions(req, resp);	        
 		} else {
 			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "action does not exists");
 		}
 	}
 	
     @Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {    	
     	if (req.getPathInfo().endsWith("/action")) {
-    		_doExecuteAction(req, resp);
+    		
+    		if ("application/json".equalsIgnoreCase(req.getContentType())) {
+    			
+    			final JSONObject json;
+    			final String requestBody;
+    			
+    			try (InputStream in = req.getInputStream()) {
+    				requestBody = IO.toString(req.getInputStream(), StandardCharsets.UTF_8);     				
+    			} catch (IOException io) {
+    				Utils.sendException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, io, resp);
+    				return;
+    			}
+    			
+    			try {
+    				json = new JSONObject(requestBody);
+				} catch (JSONException j) {
+					Utils.sendException(HttpServletResponse.SC_BAD_REQUEST, j , resp);
+    				return;					
+				} 
+    			
+    			_doExecuteAction(req, json, resp);
+    		} else {
+    			resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
+    		}
+    		
     	}
 		super.doPost(req, resp);
 	}
 
-
 	protected void _doStreamEventSubscription(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         
-        String path = req.getPathInfo(); // /{udn}/events
-        String[] parts = path != null ? path.split("/") : new String[0];
-        if (parts.length < 2) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing renderer UDN");
-            return;
-        }
-    	
- 
 		@SuppressWarnings("rawtypes")
-		final Device device = HeimklangServiceRegistry.getInstance().getRegisteredMediaDevice(parts[1]);
+		final Device device = Utils.getDeviceOrFail(req, resp);
 		if (device == null) {		
-			resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Renderer not found");
 			return;
 		}   
         
@@ -162,7 +184,35 @@ public class RendererEndpointServlet extends HttpServlet {
         return;
     }
 	
-	protected void _doExecuteAction(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-		resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+	protected void _doGetActions(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+		@SuppressWarnings("rawtypes")
+		final Device device = Utils.getDeviceOrFail(req, resp);
+		
+		if (device == null) {		
+			return;
+		} 
+		
+		final JSONObject jsonResponse = new JSONObject();
+		final JSONArray jsonActions = new JSONArray();
+		jsonResponse.put("actions", jsonActions);
+
+		try {
+			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("AVTransport"))));			
+		} catch (Throwable t) {
+			LOGGER.warn("Error listing actions", t);
+		}
+		
+		try {
+			jsonActions.putAll(Utils.getActionListArray(device.findService(new UDAServiceType("RenderingControl"))));
+		} catch (Throwable t) {
+			LOGGER.warn("Error listing actions", t);
+		}
+		
+		resp.setStatus(HttpServletResponse.SC_OK);
+		Utils.sendJSON(jsonResponse, resp);		
+	}	
+	
+	protected void _doExecuteAction(HttpServletRequest req, JSONObject requestBody, HttpServletResponse resp) throws IOException {
+		resp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);		
 	}
 }
