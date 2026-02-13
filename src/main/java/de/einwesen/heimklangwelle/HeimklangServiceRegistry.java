@@ -12,7 +12,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.binding.annotations.AnnotationLocalServiceBinder;
-import org.jupnp.controlpoint.SubscriptionCallback;
 import org.jupnp.model.DefaultServiceManager;
 import org.jupnp.model.ServiceManager;
 import org.jupnp.model.UnsupportedDataException;
@@ -289,11 +288,6 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 
 	public static String getContentServerBase() {
 		return instance.contentServerBase;
-	}
-	
-	public SubscriptionCallback registerCallback(SubscriptionCallback callback) {
-		upnpService.getControlPoint().execute(callback);
-		return callback;
 	}
 	
 }

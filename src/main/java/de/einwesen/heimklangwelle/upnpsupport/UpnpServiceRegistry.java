@@ -6,10 +6,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceConfiguration;
 import org.jupnp.UpnpServiceImpl;
+import org.jupnp.controlpoint.ActionCallback;
+import org.jupnp.controlpoint.SubscriptionCallback;
+import org.jupnp.model.action.ActionInvocation;
+import org.jupnp.model.message.UpnpResponse;
+import org.jupnp.model.message.UpnpResponse.Status;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.LocalDevice;
 import org.jupnp.model.meta.RemoteDevice;
@@ -121,6 +128,46 @@ public class UpnpServiceRegistry {
 		return this.registeredMediaDevices.get(udn);
 	}    
 
+	public SubscriptionCallback registerCallback(SubscriptionCallback callback) {
+		upnpService.getControlPoint().execute(callback);
+		return callback;
+	}
+	
+	/**
+	 * This method executes the invocation, and returns the response object, even if 
+	 * that respons is a fail-state.
+	 * 
+	 * Exceptions xshould only occur in unforseen states
+	 * 
+	 * @param invocation
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	public Future<UpnpResponse> executeAndReturnReponse(ActionInvocation invocation) {
+		
+		final CompletableFuture<UpnpResponse> future = new CompletableFuture<UpnpResponse>();
+		
+		this.upnpService.getControlPoint().execute(
+			new ActionCallback(invocation) {
+				@Override
+			    public void success(ActionInvocation invocation) {
+					future.complete(new UpnpResponse(Status.OK));
+			    }
+
+			    @Override
+			    public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+			        if (operation != null) {
+			        	future.complete(new UpnpResponse(operation.getStatusCode(), defaultMsg));			        		
+			        } else {
+			        	future.complete(new UpnpResponse(0, defaultMsg));
+			        }
+			    }
+			}
+		);
+		
+		return future;		
+	}
+	
 	public void shutdown() {
     	this.upnpService.shutdown();
     }

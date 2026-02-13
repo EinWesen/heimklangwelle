@@ -1,13 +1,17 @@
 package de.einwesen.heimklangwelle.controller.rest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.util.IO;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.jupnp.model.meta.Action;
 import org.jupnp.model.meta.ActionArgument;
@@ -93,6 +97,39 @@ public class Utils {
 		} 
 		
 		return device;
-	}		
+	}
+	
+	public static JSONObject getJSONObjectBody(HttpServletRequest req, HttpServletResponse resp) {
+		final String cType = ("" + req.getContentType()).toLowerCase();
+		if (cType.startsWith("application/json")) {
+			
+			final JSONObject json;
+			final String requestBody;
+			
+			try (InputStream in = req.getInputStream()) {
+				requestBody = IO.toString(req.getInputStream(), StandardCharsets.UTF_8);     				
+			} catch (IOException io) {
+				Utils.sendException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, io, resp);
+				return null;
+			}
+			
+			try {
+				json = new JSONObject(requestBody);
+				return json;
+			} catch (JSONException j) {
+				Utils.sendException(HttpServletResponse.SC_BAD_REQUEST, j , resp);				
+			} 
+			
+		} else {
+			try {
+				LOGGER.trace("Wrong contenttype: ", req.getContentType());
+				resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
+			} catch (IOException e) {
+				LOGGER.debug("Could set status", e);
+			}
+		}		
+		
+		return null;
+	}
 
 }

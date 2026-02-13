@@ -34,6 +34,14 @@
     <div id="eventOutput"></div>
 </div>
 
+<div>
+    <h2>Command</h2>
+	<div onclick="sendAction()"><button>callAction</button></div>
+	<div>
+    	<textarea id="commandArea" rows="10" style="width: 100%;"></textarea>
+	</div>
+</div>
+
 <script>
 let currentEventSource = null;
 let currentUdn = null;
@@ -59,7 +67,12 @@ function selectDevice(udn, deviceType) {
     currentUdn = udn;
 	loadServices();
     subscribeToEvents(udn, deviceType);
-    //setupControls(udn);
+}
+
+function containsOutputArgument(actionArguments) {
+	return actionArguments.some(action => {
+		return action.direction == 'OUT';
+	});		
 }
 
 function loadServices() {
@@ -75,7 +88,6 @@ function loadServices() {
 					const serviceLi = document.createElement('li');
 	                serviceLi.className = 'service';
 					serviceLi.appendChild(document.createElement('div')).textContent = service.id + ' (' + service.type + ')';
-	                //li.onclick = () => selectDevice(device.udn);
 					
 					let isContentServer = service.type.includes('schemas-upnp-org:ContentDirectory'),
 						isRenderControl = service.type.includes('schemas-upnp-org:RenderingControl'),
@@ -88,9 +100,10 @@ function loadServices() {
 						const actionLi = actionList.appendChild(document.createElement('li'));
 						actionLi.className = 'action';
 						
-						if (action.arguments.length == 1 && !isContentServer) {
+						if (!containsOutputArgument(action.arguments)) {
 							const btn = actionLi.appendChild(document.createElement('button'));
 							btn.textContent = action.name;
+							btn.onclick = () => prepareCommand(service, action);
 						} else {
 							actionLi.appendChild(document.createElement('span')).textContent = action.name;							
 						}
@@ -136,52 +149,42 @@ function subscribeToEvents(udn, deviceType) {
 	}
 }
 
-function setupControls(udn) {
+function prepareCommand(service, action) {
+	let inputArguments = [];
 	
-	const url = '../rest/renderer/' + encodeURIComponent(udn) + '/action';
-	fetch(url, { method: 'GET' })
-	    .then(resp => resp.json())
-		.then(data => {
-			data.actions.forEach(a => {
-			    const btn = document.createElement('button');
-			    btn.textContent = a.name;
-			    btn.onclick = () => sendAction(udn, a.action);
-			    container.appendChild(btn);
-			});
-			
-						
-			console.log(data);
-		})
-	    .catch(err => alert(err));
+	inputArguments.push({});
 		
-			
-/*    const container = document.getElementById('controlButtons');
-    container.innerHTML = '';
+	let data = {
+		'serviceId': service.id,
+		'action': action.name,
+		'inputArguments' : Object.fromEntries(action.arguments.map((arg) => {
+			if (arg.name == 'InstanceID') {
+				return [arg.name, '0'];
+			} else if (arg.name == 'Channel') {
+				return [arg.name, 'Master'];				
+			} else if (arg.datatype.startsWith('ui')) {
+				return [arg.name, '100'];
+			} else {
+				return [arg.name, ' '];
+			}
+		}))
+	};
+	
+	commandArea.value = JSON.stringify(data, undefined, 3);
+}
 
-    const actions = [
-        { name: 'Play', action: 'play' },
-        { name: 'Pause', action: 'pause' },
-        { name: 'Stop', action: 'stop' },
-        { name: 'Next', action: 'next' },
-        { name: 'Previous', action: 'previous' }
-    ];
-
-    actions.forEach(a => {
-        const btn = document.createElement('button');
-        btn.textContent = a.name;
-        btn.onclick = () => sendAction(udn, a.action);
-        container.appendChild(btn);
-    });
-*/}
-
-function sendAction(udn, action) {
-    const url = '/rest/renderer/' + encodeURIComponent(udn) + '/action';
-    fetch(url, { method: 'POST' })
-        .then(resp => {
-            if (!resp.ok) throw new Error('Action failed: ' + resp.status);
-            console.log('Action sent:', action);
-        })
-        .catch(err => alert(err));
+function sendAction() {
+	console.log(commandArea.value);
+    const url = '../rest/devices/' + encodeURIComponent(currentUdn) + '/callAction';
+	fetch(url, {
+	  method: "POST",
+	  body: commandArea.value,
+	  headers: {
+	    "Content-type": "application/json; charset=UTF-8"
+	  }
+	}).then(resp => {
+		alert(resp.status + ' ' + resp.statusText);
+    }).catch(err => alert(err));
 }
 
 // auto-load devices on page load
