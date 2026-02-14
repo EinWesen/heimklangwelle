@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Heimklang Test Interface</title>
+
 <style>
     body { font-family: sans-serif; padding: 20px; }
     #devices, #controls, #events { margin-bottom: 20px; }
@@ -42,17 +43,18 @@
 	</div>
 </div>
 
-<script>
+<script type="module">
+import { apiFetch } from '../js/restupnp.js';
+
 let currentEventSource = null;
 let currentUdn = null;
 
 function loadDevices() {
-    fetch('../rest/devices/')
-        .then(resp => resp.json())
-        .then(deviceResponse => {
+    apiFetch('../rest/devices/')
+        .then((apiResult) => {
             const list = document.getElementById('deviceList');
             list.innerHTML = '';
-			deviceResponse.devices.forEach(device => {
+			apiResult.data.devices.forEach(device => {
                 const li = document.createElement('li');
                 li.className = 'device';
                 li.textContent = device.friendlyName + ' (' + device.udn + ')';
@@ -60,7 +62,7 @@ function loadDevices() {
                 list.appendChild(li);
             });
         })
-        .catch(err => alert('Error loading devices: ' + err));
+        .catch(errInfo => alert('Error loading devices: ' + errInfo.summary));
 }
 
 function selectDevice(udn, deviceType) {
@@ -76,12 +78,11 @@ function containsOutputArgument(actionArguments) {
 }
 
 function loadServices() {
-    fetch('../rest/devices/'+ encodeURIComponent(currentUdn), { method: 'GET' })
-        .then(resp => resp.json())
-        .then(device => {
+    apiFetch('../rest/devices/'+ encodeURIComponent(currentUdn), { method: 'GET' })
+        .then(apiResult => {
             const list = document.getElementById('serviceList');
             list.innerHTML = '';
-            device.services.forEach(service => {                
+            apiResult.data.services.forEach(service => {                
 				
 				if (service.type.includes('schemas-upnp-org:')) {
 				
@@ -116,7 +117,7 @@ function loadServices() {
 				}
             });
         })
-        .catch(err => alert('Error loading services: ' + err));
+        .catch(errInfo => alert('Error loading services: ' + errInfo.summary));
 }
 
 
@@ -173,18 +174,17 @@ function prepareCommand(service, action) {
 	commandArea.value = JSON.stringify(data, undefined, 3);
 }
 
-function sendAction() {
-	console.log(commandArea.value);
+window.sendAction = () => {
     const url = '../rest/devices/' + encodeURIComponent(currentUdn) + '/callAction';
-	fetch(url, {
+	apiFetch(url, {
 	  method: "POST",
 	  body: commandArea.value,
 	  headers: {
 	    "Content-type": "application/json; charset=UTF-8"
 	  }
-	}).then(resp => {
-		alert(resp.status + ' ' + resp.statusText);
-    }).catch(err => alert(err));
+	}).then(({response, data}) => {
+		alert(response.status + ' ' + response.statusText);
+    }).catch(errInfo => alert('Action failed: ' + errInfo.summary));
 }
 
 // auto-load devices on page load
