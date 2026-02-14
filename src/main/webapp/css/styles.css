@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+section {
+    padding: 10px;	
+}
+
+h1 {
+	margin-top: 0px;
+	margin-bottom: 5px;
+	font-size: 1.5em;
+}
+
+.global-actions-panel, .playlist-actions-panel {
+	background: #ececec;
+}
+
+.player-panel {
+    
+    background: #f5f5f5;
+	border-right: 1px solid #ccc;
+}
+
+.browser-panel {
+	border-top: 1px solid #ccc;
+}
+.playlist-panel {
+	border: 1px solid #ccc;
+}

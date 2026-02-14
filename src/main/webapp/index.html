@@ -1,15 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Heimklang UI</title>
+	<meta charset="UTF-8">
+	<title>Heimklang UI</title>
+	<link rel="stylesheet" href="css/layout.css">
+	<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-<h1>Heimklang UI</h1>
+	<main>
+		
+	    <section class="player-panel">
+	        <div id="track-info">
+	            <div id="track-title">Nothing playing</div>
+	            <div id="time-info">00:00 / 00:00</div>
+	        </div>
+	
+	        <div class="transport-controls">
+	            <button id="btn-prev">Prev</button>
+	            <button id="btn-play">Play</button>
+	            <button id="btn-pause">Pause</button>
+	            <button id="btn-stop">Stop</button>
+	            <button id="btn-next">Next</button>
+	        </div>
+	
+	        <div class="volume-controls">
+	            <input type="range" id="volume-slider" min="0" max="100">
+	            <button id="btn-mute">Mute</button>
+	        </div>
+	    </section>
+		
+		<section class="global-actions-panel">			
+			<div>
+				<button id="btn-device-refresh">Refresh devices</button>
+				<select id="select-renderer">
+					<option value="">Select MediaRenderer</option>
+				</select>
+				<select id="select-server">
+					<option value="">Select MediaServer</option>
+				</select>		
+			</div>			
+		</section>
+	
+	    <section class="browser-panel">
+	        <h1>
+				<span>Browser</span> 
 
-
-<script>
-
-</script>
+				<button>Refresh devices</button>	
+			</h1>
+	        <ul id="folder-list" class="folder-list"></ul>
+	    </section>
+	
+	    <section class="playlist-panel">
+	        <h1>
+				<span>Playlist</span>
+			</h1>
+	        <ul id="playlist"></ul>
+	    </section>
+		
+		<section class="playlist-actions-panel">			
+			<div>
+				<button id="btn-pl-remove">Remove</button>
+				<button id="btn-pl-clear">Clear</button>				
+			</div>
+		</section>	
+	</main>
 </body>
 </html>
