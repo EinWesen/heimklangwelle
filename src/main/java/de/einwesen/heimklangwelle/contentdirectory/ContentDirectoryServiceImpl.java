@@ -146,32 +146,37 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 				
 			}
 
-			if (firstResult < didlObjects.size()) {
-				
-				if (didlObjects.size() > 1) {
-					// We sort for convinience, but also need predictabel order for paging
+			
+			final DIDLContent didl = new DIDLContent();
+			if (didlObjects.size() > 0) {
+			
+				if (firstResult < didlObjects.size()) {
 					
-					//TODO: Needs to take locale into account 
-					didlObjects.sort(new Comparator<DIDLObject>() {
-						@Override
-						public int compare(DIDLObject o1, DIDLObject o2) {
-							return o1.getTitle().compareTo(o2.getTitle());
-						}				
-					});
+					if (didlObjects.size() > 1) {
+						// We sort for convinience, but also need predictabel order for paging
+						
+						//TODO: Needs to take locale into account 
+						didlObjects.sort(new Comparator<DIDLObject>() {
+							@Override
+							public int compare(DIDLObject o1, DIDLObject o2) {
+								return o1.getTitle().compareTo(o2.getTitle());
+							}				
+						});
+					}
+					
+					final int maxEntry = Long.valueOf(Math.max(Math.min(firstResult + maxResults, didlObjects.size()),1)).intValue();
+					for (DIDLObject dObj : didlObjects.subList(Long.valueOf(firstResult).intValue(), maxEntry)) {
+						didl.addObject(dObj);					
+					}
+					
+					
+				} else {
+					throw new IllegalArgumentException("firstresult > childCount ("+didlObjects.size()+")");
 				}
-				
-				DIDLContent didl = new DIDLContent();
-				final int maxEntry = Long.valueOf(Math.max(Math.min(firstResult + maxResults, didlObjects.size()),1)).intValue();
-				for (DIDLObject dObj : didlObjects.subList(Long.valueOf(firstResult).intValue(), maxEntry)) {
-					didl.addObject(dObj);					
-				}
-				
-				final String xml = new DIDLParser().generate(didl);
-				return new org.jupnp.support.model.BrowseResult(xml, didl.getCount(), didlObjects.size());
-				
-			} else {
-				throw new IllegalArgumentException("firstresult > childCount ("+didlObjects.size()+")");
 			}
+			
+			final String xml = new DIDLParser().generate(didl);
+			return new org.jupnp.support.model.BrowseResult(xml, didl.getCount(), didlObjects.size());
 		
 		} catch (ContentDirectoryException c) {
 			throw c;
