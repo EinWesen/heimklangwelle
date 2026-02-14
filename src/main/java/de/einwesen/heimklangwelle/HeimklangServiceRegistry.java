@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import de.einwesen.heimklangwelle.contentdirectory.ContentByIdServlet;
 import de.einwesen.heimklangwelle.contentdirectory.ContentDirectoryServiceImpl;
 import de.einwesen.heimklangwelle.contentdirectory.MediaServerConnectionManagerServiceImpl;
+import de.einwesen.heimklangwelle.controller.rest.ContentDirectoryEndpointServlet;
 import de.einwesen.heimklangwelle.controller.rest.DevicesEndpointServlet;
 import de.einwesen.heimklangwelle.controller.rest.RendererEndpointServlet;
 import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
@@ -241,7 +242,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 		servletHandler.addServlet(new ServletHolder(new RendererEndpointServlet()), "/rest/renderer/*");
 
         // Content directory browsing
-		//servletHandler.addServlet(new ServletHolder(new ContentDirectoryServlet()), "/rest/contentdirectory/*/browse");
+		servletHandler.addServlet(new ServletHolder(new ContentDirectoryEndpointServlet()), "/rest/contentdirectory/*");
 
 		// Web content
 		ServletHolder staticHolder = new ServletHolder(new DefaultServlet());
