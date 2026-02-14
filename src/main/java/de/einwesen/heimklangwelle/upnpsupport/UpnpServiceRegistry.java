@@ -168,6 +168,12 @@ public class UpnpServiceRegistry {
 		return future;		
 	}
 	
+	public <R> Future<R> execute(FetchActionCallback<R> fetchCallback) {
+		final ActionCallback actionCallback = fetchCallback.castToActionCallback();
+		this.upnpService.getControlPoint().execute(actionCallback);
+		return fetchCallback.getFutureResult();
+	}
+
 	public void shutdown() {
     	this.upnpService.shutdown();
     }
