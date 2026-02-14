@@ -48,3 +48,13 @@ export function apiFetch(url, options = {}) {
       });
   });
 }
+
+let BASE_REST_URL = 'rest';
+export function setBaseUrl(url) {
+	BASE_REST_URL = url;
+}
+
+export async function listDevices() {
+	return apiFetch(`${BASE_REST_URL}/devices/`);
+}
+
