@@ -30,6 +30,7 @@ public class Utils {
 		try {
 			final StringWriter sw = new StringWriter();
 			t.printStackTrace(new PrintWriter(sw, true));
+			resp.addHeader("Cache-Control", "no-cache,no-store");
 			resp.sendError(status, sw.toString());
 			resp.flushBuffer();
 			return true;
@@ -41,6 +42,7 @@ public class Utils {
 	
 	public static void sendJSON(JSONObject json, HttpServletResponse resp) {
         try {
+        	resp.addHeader("Cache-Control", "no-cache,no-store");
 			resp.setContentType("application/json");
 			resp.setCharacterEncoding("UTF-8");
 			resp.getWriter().write(json.toString());
