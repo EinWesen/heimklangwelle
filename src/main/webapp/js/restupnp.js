@@ -58,3 +58,6 @@ export async function listDevices() {
 	return apiFetch(`${BASE_REST_URL}/devices/`);
 }
 
+export async function browseContentDirectory(udn, objectId = "0") {
+	return apiFetch(`${BASE_REST_URL}/contentdirectory/${udn}/browse?objectId=${encodeURIComponent(objectId)}`);
+}

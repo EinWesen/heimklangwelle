@@ -1,8 +1,15 @@
 import * as api from "./restupnp.js";
+import { ContentServerBrowser } from "./contentbrowser.js";
+
+const SERVER_SELECT_ID = 'select-server';
+const RENDERER_SELECT_ID = 'select-renderer';
+const REFRESH_DEVICE_BUTTON = 'btn-device-refresh';
+
+const CONTENTBROWSER = new ContentServerBrowser('folder-list');
 
 async function loadDevices() {
-	let selRenderer = document.getElementById('select-renderer'),
-	    selServer = document.getElementById('select-server'),
+	let selRenderer = document.getElementById(RENDERER_SELECT_ID),
+	    selServer = document.getElementById(SERVER_SELECT_ID),
 		selectedRenderer = selRenderer.value,
 		selectedServer = selServer.value;
 	
@@ -35,12 +42,13 @@ async function loadDevices() {
 }
 
 
-import { loadRoot, renderBrowser } from "./browser.js";
 
-async function init() {
-	document.getElementById('btn-device-refresh').onclick = loadDevices;
+async function init() {	
+	document.getElementById(REFRESH_DEVICE_BUTTON).onclick = loadDevices;
+	document.getElementById(SERVER_SELECT_ID).onchange = (event) => {
+		CONTENTBROWSER.selectDevice(event.target.value == '-' ? undefined : event.target.value);
+	};
 	loadDevices();
-	loadRoot();
 }
 
 init();
