@@ -90,9 +90,9 @@ export async function callServiceAction(udn, callOptions) {
 				resolve(apiResponse);
 			} else {
 				reject({
-					summary: data.message,
+					summary: apiResponse.data.message,
 				    isError: false,
-				    error: data.statusCode,
+				    error: apiResponse.data.statusCode,
 				    response: apiResponse.response,
 				    data: apiResponse.data
 				});			
