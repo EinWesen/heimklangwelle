@@ -30,7 +30,13 @@ h1 {
 	border: 1px solid #ccc;
 }
 
+#track-title {
+	margin-left: 5px;
+}
 
+.transport-controls {
+	margin-top: 4px;
+}
 
 
 .folder-list {

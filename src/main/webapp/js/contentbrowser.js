@@ -33,11 +33,7 @@ function renderBrowser(browserInstance) {
 			} 
 			
 			li = createBrowserLi('file', fileicon, item.title)			
-            li.ondblclick = () => {
-                document.dispatchEvent(
-                    new CustomEvent("addToPlaylist", { detail: item })
-                );
-            };
+            li.ondblclick = () => browserInstance._triggerDblClick( item );	
         }
         
         list.appendChild(li);
@@ -45,6 +41,7 @@ function renderBrowser(browserInstance) {
 }
 
 export class ContentServerBrowser {
+  static EVENT_NAME_DBLCLICKITEM = 'dblclickItem';
   constructor(htmlListId) {
     this._containerElement = document.getElementById(htmlListId);	
 	this._deviceUdn = undefined;
@@ -83,7 +80,17 @@ export class ContentServerBrowser {
 	  this._pathStack = newStack;
 	  this._items = apiResponse.data.children;	
   	  renderBrowser(this);
-  }  
+  }
+  
+  addEventListener(type, listener) {
+	this._containerElement.addEventListener(type, listener);
+  }
+  
+  _triggerDblClick(item) {
+	this._containerElement.dispatchEvent(
+	    new CustomEvent(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, { detail: item })
+	);	
+  } 
   
 }
 
