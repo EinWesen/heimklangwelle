@@ -83,7 +83,7 @@ public class DevicesEndpointServlet extends HttpServlet {
 	protected void _doExecuteAction(HttpServletRequest req, JSONObject requestBody, HttpServletResponse resp) throws IOException {
 		
 		if (requestBody == null) {
-			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing fields in request body");
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing request body");
 			return;
 		}
 		
@@ -96,7 +96,7 @@ public class DevicesEndpointServlet extends HttpServlet {
 			actionName = requestBody.getString("action");
 			inputArguments = requestBody.getJSONObject("inputArguments");
 		} catch (JSONException e) {
-			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing fields in request body");
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing property in request body: " + e.getMessage());
 			return;
 		}
 		
@@ -139,7 +139,7 @@ public class DevicesEndpointServlet extends HttpServlet {
 		    }
 		
 		} catch (JSONException e) {
-			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing inputArgument in request body");
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing inputArgument in request body: " + e.getMessage() );
 			return;
 		}	    
 
