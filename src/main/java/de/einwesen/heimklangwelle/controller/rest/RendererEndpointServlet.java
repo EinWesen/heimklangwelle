@@ -119,14 +119,21 @@ public class RendererEndpointServlet extends HttpServlet {
             }
         }, 15, 15, TimeUnit.SECONDS);  
         
+        synchronized (writeLock) {
+        	writer.write("event: X_PROPERTIES\n");
+            writer.write("data: "+new JSONArray(RendererSubscriptionPublisherCallback.SUPPORTED_PROPERTIES).toString()+"\n\n");
+            writer.flush();
+        }        
+        
         // create callbacks
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(avTransport, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_AVTRANSPORT) {
         	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.run();}
-        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String value) {
+        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
         	    if (closed.get()) return;
         	    try {
         	        synchronized (writeLock) {
-        	            writer.write("data: "+value+"\n\n");
+        	        	writer.write("event: "+propertyName+"\n");
+        	            writer.write("data: "+propertyValueString+"\n\n");
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {
@@ -136,11 +143,12 @@ public class RendererEndpointServlet extends HttpServlet {
         }));
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(renderingControl, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_RENDERINGCONTROL) {
         	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.run();}
-        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String value) {
+        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
         	    if (closed.get()) return;
         	    try {
         	        synchronized (writeLock) {
-        	            writer.write("data: "+value+"\n\n");
+        	        	writer.write("event: "+propertyName+"\n");
+        	            writer.write("data: "+propertyValueString+"\n\n");
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {

@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
 import org.jupnp.model.gena.CancelReason;
 import org.jupnp.model.gena.GENASubscription;
 import org.jupnp.model.message.UpnpResponse;
@@ -23,7 +22,17 @@ import org.jupnp.support.renderingcontrol.lastchange.RenderingControlLastChangeP
 import de.einwesen.heimklangwelle.upnpsupport.LastChangeAwareSubscriptionCallback;
 
 public abstract class RendererSubscriptionPublisherCallback extends LastChangeAwareSubscriptionCallback {
-
+	public static final String[] SUPPORTED_PROPERTIES = {
+			"AVTransportURIMetaData",
+			"RelativeTimePosition",
+			"AVTransportURI",
+			"CurrentTrack",
+			"NumberOfTracks",
+			"TransportState",
+			"Volume",	
+			"Mute"		
+	};
+	
 	public static final int SUBSCRIPTION_AVTRANSPORT = 1;
 	public static final int SUBSCRIPTION_RENDERINGCONTROL = 2;
 	
@@ -53,38 +62,38 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	@SuppressWarnings("rawtypes")
 	@Override
 	protected void eventedValueReceived(GENASubscription subscription, EventedValue<?> eventedValue) {
-		final JSONObject json = new JSONObject();
+		final String value;
 		
 		switch (eventedValue.getName()) {
+			case "AVTransportURIMetaData":
 			case "RelativeTimePosition":
-				json.put(eventedValue.getName(), getNonNullString(eventedValue.getValue()));
+				value = getNonNullString(eventedValue.getValue());
 				break;
 			case "AVTransportURI":				
-			case "AVTransportURIMetaData":
-				json.put(eventedValue.getName(), getNonNullString((URI)eventedValue.getValue()));
+				value = getNonNullString((URI)eventedValue.getValue());
 				break;
 			case "CurrentTrack":
 			case "NumberOfTracks":
-				json.put(eventedValue.getName(), getNonNullLong((UnsignedIntegerFourBytes)eventedValue.getValue()));
+				value = String.valueOf(getNonNullLong((UnsignedIntegerFourBytes)eventedValue.getValue()));
 				break;
 			case "TransportState":
 				final TransportState transportState = (TransportState)eventedValue.getValue();
-				json.put(eventedValue.getName(), transportState != null ? transportState.name() : "");
+				value = (transportState != null ? transportState.name() : "");
 				break;
 			case "Volume":
-				if (eventedValue != null) {
-					final ChannelVolume vol = (ChannelVolume)eventedValue.getValue();
-					if (vol.getChannel() == Channel.Master) {
-						json.put(eventedValue.getName(), vol.getVolume());
-					}
+				final ChannelVolume vol = (ChannelVolume)eventedValue.getValue();
+				if (vol != null && vol.getChannel() == Channel.Master) {
+					value = String.valueOf(vol.getVolume());
+				} else {
+					value = null;					
 				}
 				break;
 			case "Mute":
-				if (eventedValue != null) {
-					final ChannelMute vol = (ChannelMute)eventedValue.getValue();
-					if (vol.getChannel() == Channel.Master) {
-						json.put(eventedValue.getName(), vol.getMute());
-					}
+				final ChannelMute mute = (ChannelMute)eventedValue.getValue();
+				if (mute != null && mute.getChannel() == Channel.Master) {
+					value = String.valueOf(mute.getMute());
+				} else {
+					value = null;
 				}
 				break;
 			case "TransportStatus":
@@ -108,14 +117,14 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 			case "PresetNameList":
 			default:
 				//not supported by us
+				value = null;
 				break;			
 		}		
 		
-		if (!json.isEmpty()) {			
-			final String jsonString = json.toString();
-			if (!jsonString.equals(lastStates.get(eventedValue.getName()))) {				
-				publish(subscription, jsonString);
-				this.lastStates.put(eventedValue.getName(), jsonString);
+		if (value != null) {			
+			if (!value.equals(lastStates.get(eventedValue.getName()))) {				
+				publish(subscription, eventedValue.getName(), value);
+				this.lastStates.put(eventedValue.getName(), value);
 			}
 		}		
 	}
@@ -153,6 +162,6 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	@SuppressWarnings("rawtypes")
 	protected abstract void stopped(GENASubscription subscription);
 	@SuppressWarnings("rawtypes")
-	protected abstract void publish(GENASubscription subscription, String value);
+	protected abstract void publish(GENASubscription subscription, String propertyName, String propertyValueString);
 
 }

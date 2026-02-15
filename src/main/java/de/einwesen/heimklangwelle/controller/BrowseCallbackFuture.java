@@ -22,6 +22,10 @@ public class BrowseCallbackFuture extends Browse implements FetchActionCallback<
 		super(service, objectID, flag, filter, firstResult, maxResults, orderBy);
 	}
 
+	public BrowseCallbackFuture(Service<?, ?> service, String containerId, BrowseFlag flag) {
+		super(service, containerId, flag);
+	}
+	
 	@Override
 	public void received(ActionInvocation<?> actionInvocation, DIDLContent didl) {
 		this.completableFuture.complete(didl);		
