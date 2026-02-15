@@ -63,3 +63,27 @@ h1 {
 .folder-list li:nth-child(even) {
     background: #fafafa;
 }
+
+
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  border: 2px #A4000F solid;
+  background: #F8D5DB;
+  color: #A4000F;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  
+  opacity: 0;
+  transition: all 0.25s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

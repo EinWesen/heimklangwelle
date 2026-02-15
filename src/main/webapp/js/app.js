@@ -7,6 +7,24 @@ const REFRESH_DEVICE_BUTTON = 'btn-device-refresh';
 
 const CONTENTBROWSER = new ContentServerBrowser('folder-list');
 
+function showToast(message, duration = 3000) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+
+  document.body.appendChild(toast);
+
+  // allow DOM paint before animation
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  }, duration);
+}
+
 async function loadDevices() {
 	let selRenderer = document.getElementById(RENDERER_SELECT_ID),
 	    selServer = document.getElementById(SERVER_SELECT_ID),
@@ -52,3 +70,4 @@ async function init() {
 }
 
 init();
+
