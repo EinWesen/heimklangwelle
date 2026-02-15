@@ -1,6 +1,10 @@
 package de.einwesen.heimklangwelle.renderers;
 
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.avtransport.AVTransportException;
@@ -25,51 +29,64 @@ public abstract class AbstractRendererWrapper {
 	protected volatile String currentURIMetaData = "";
 	protected volatile boolean ready = false;
 	
-	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>(); 
+	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>();
+	
+	private final ScheduledExecutorService eventScheduler = Executors.newSingleThreadScheduledExecutor();
+	private volatile ScheduledFuture<?> pendingStateTask = null;
+	private volatile ScheduledFuture<?> pendingVolumneTask = null;
 	
 	public boolean addListener(RendererChangeEventListener e) {
 		return changeListeners.add(e);
 	}
-		
-	protected void fireEvent(Runnable r) {
-		// JAVA 21:  Thread.startVirtualThread(r);
-		new Thread(r).start();
-	}
 	
 	protected void firePlayerStateChangedEvent() {
-		LOGGER.debug("fire!");
-		fireEvent(new Runnable() {
+		LOGGER.trace("fire!");
+		if (this.pendingStateTask != null) {
+			if(this.pendingStateTask.cancel(false)) {
+				LOGGER.trace("Debounced previous event!");
+			};
+		}
+		
+		this.pendingStateTask = this.eventScheduler.schedule(new Runnable() {
 			@Override
 			public void run() {
+				LOGGER.debug("Scheduled stateupdate fired!");
 				synchronized (changeListeners) {
 					for (RendererChangeEventListener l : changeListeners) {
 						l.firePlayerStateChangedEvent(instanceId);
 					}								
 				}
 			}
-		});
+		}, 500, TimeUnit.MILLISECONDS);			
 	}
 	
     protected void setPlayerStateAndFire(TransportState state) {
     	if (this.playerState != state) {    		
-    		LOGGER.debug("fire!:" + state);
+    		LOGGER.trace("fire!:" + state);
     		this.playerState = state;
     		this.firePlayerStateChangedEvent();
     	}
     }	
 	
 	protected void firePlayerVolumneChangedEvent() {
-		LOGGER.debug("fire!");
-		fireEvent(new Runnable() {
+		LOGGER.trace("fire!");
+		if (this.pendingVolumneTask != null) {
+			if(this.pendingVolumneTask.cancel(false)) {
+				LOGGER.trace("Debounced previous event!");
+			};
+		}
+		
+		this.pendingVolumneTask = this.eventScheduler.schedule(new Runnable() {
 			@Override
-			public void run() {		
+			public void run() {
+				LOGGER.debug("Scheduled volumeupdate fired!");
 				synchronized (changeListeners) {
-					for (RendererChangeEventListener l : changeListeners) {			
-						l.firePlayerVolumneChangedEvent(instanceId);
-					}			
+					for (RendererChangeEventListener l : changeListeners) {
+						l.firePlayerStateChangedEvent(instanceId);
+					}								
 				}
 			}
-		});
+		}, 500, TimeUnit.MILLISECONDS);		
 	}	
 	
 	public UnsignedIntegerFourBytes getInstanceId() {
@@ -160,7 +177,7 @@ public abstract class AbstractRendererWrapper {
 	}
 
 	public void shutdown() {
-		// Overwrite if needed
+		this.eventScheduler.shutdownNow();
 	}
 
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;
