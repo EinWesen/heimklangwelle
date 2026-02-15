@@ -50,14 +50,14 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
-		String u = this.getCurrentURI();
+		String u = this.getCurrentTransportURI();
 		if (u.toLowerCase().endsWith(".m3u")) {
 			this.playlistSize = 2;
 		} else {
 			this.playlistSize = 1;
 		}		
 		this.currentTrack = 1;
-		LOGGER.info("loadCurrentContent: " +  getCurrentURI() + " -> " + this.getPlaylistSize());
+		LOGGER.info("loadCurrentContent: " +  getCurrentTransportURI() + " -> " + this.getPlaylistSize());
 		setPlayerStateAndFire(TransportState.STOPPED);
 	}
 
@@ -82,7 +82,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 
 	@Override
 	public void play() throws AVTransportException {
-		if (getCurrentURI() != null) {
+		if (getCurrentTransportURI() != null) {
 			LOGGER.info("play!");
 			setPlayerStateAndFire(TransportState.PLAYING);
 		} else {

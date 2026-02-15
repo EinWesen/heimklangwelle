@@ -25,8 +25,8 @@ public abstract class AbstractRendererWrapper {
 	protected volatile TransportState playerState = TransportState.NO_MEDIA_PRESENT;
 	protected volatile TransportStatus errorState = TransportStatus.OK;
 	
-	protected volatile String currentURI = ""; 
-	protected volatile String currentURIMetaData = "";
+	protected volatile String currentTransportURI = ""; 
+	protected volatile String currentTransportURIMetaData = "";
 	protected volatile boolean ready = false;
 	
 	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>();
@@ -145,27 +145,27 @@ public abstract class AbstractRendererWrapper {
 	
 	public void setCurrentContent(String currentURI, String currentURIMetaData) throws AVTransportException {
 		if (currentURI != null) {
-			this.currentURI = currentURI;			
+			this.currentTransportURI = currentURI;			
 		} else {
-			this.currentURI = "";
+			this.currentTransportURI = "";
 		}
 		
 		
 		if (currentURIMetaData != null) {
-			this.currentURIMetaData = currentURIMetaData;			
+			this.currentTransportURIMetaData = currentURIMetaData;			
 		} else {
-			this.currentURIMetaData = "";
+			this.currentTransportURIMetaData = "";
 		}
 		
 		this.loadCurrentContent();
 	}
 
-	public String getCurrentURI() {
-		return currentURI;
+	public String getCurrentTransportURI() {
+		return currentTransportURI;
 	}
 
-	public String getCurrentURIMetaData() {
-		return currentURIMetaData;
+	public String getCurrentTransportURIMetaData() {
+		return currentTransportURIMetaData;
 	}
 	
 	public String getDescription() {

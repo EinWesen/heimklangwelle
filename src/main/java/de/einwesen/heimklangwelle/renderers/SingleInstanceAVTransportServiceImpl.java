@@ -214,7 +214,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 		 * - Single item case: AVTransport has 1 track and AVTransportURI equals CurrentTrackURI.
 		 * - Can be used to retrieve metadata via the ContentDirectory service. 
 		 */ 		
-	    final String currentURI = this.backendInstance.getCurrentURI();
+	    final String currentTransportURI = this.backendInstance.getCurrentTransportURI();
 	    
 	    /*
 	     * CurrentMetadata: This required state variable holds metadata associated with the resource pointed to by AVTransportURI.
@@ -222,7 +222,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	     * - Format: DIDL-Lite XML Fragment (see ContentDirectory service specification [7] for details).
 	     *  - Value if not supported: "NOT_IMPLEMENTED".
 	     */
-	    final String currentURIMetaData = this.backendInstance.getCurrentURIMetaData();
+	    final String currentTransportURIMetaData = this.backendInstance.getCurrentTransportURIMetaData();
 		
 	    /*
 	     * NextAVTransportURI: This required state variable holds the URI to be played after the current AVTransportURI completes playback. 
@@ -246,7 +246,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	    final StorageMedium recordMedium = StorageMedium.NOT_IMPLEMENTED;
 	    final RecordMediumWriteStatus recordWriteStatus = RecordMediumWriteStatus.NOT_IMPLEMENTED;
 		
-		return new MediaInfo(currentURI, currentURIMetaData, nextURI, nextURIMetaData, numberOfTracks, mediaDuration, playMedium, recordMedium, recordWriteStatus);
+		return new MediaInfo(currentTransportURI, currentTransportURIMetaData, nextURI, nextURIMetaData, numberOfTracks, mediaDuration, playMedium, recordMedium, recordWriteStatus);
 	}
 
 	@Override
@@ -301,7 +301,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	     *  If the media contains multiple tracks but doesn't have individual URIs for each,
 	     * CurrentTrackURI is set to AVTransportURI.
 	     */ 
-	    final String trackURI = this.backendInstance.getCurrentURI();
+	    final String trackURI = this.backendInstance.getCurrentTransportURI();
 	    
 	    /*
 	     *  The current position in the media, measured from a zero reference point. 

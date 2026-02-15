@@ -265,8 +265,8 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 			case IDLE:
 				if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
 					this.currentTrack = 0;
-					this.currentURI = "";
-					this.currentURIMetaData = "";
+					this.currentTransportURI = "";
+					this.currentTransportURIMetaData = "";
 					this.playlistSize = 0;
 					this.playerState = TransportState.STOPPED;
 					this.firePlayerStateChangedEvent();					
@@ -377,8 +377,8 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         
         if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
         	this.setPlayerStateAndFire(TransportState.STOPPED);
-        	this.currentURI = "";
-        	this.currentURIMetaData = "";
+        	this.currentTransportURI = "";
+        	this.currentTransportURIMetaData = "";
         	this.currentTrackTimePos = -1;
         	this.currentTrack = 0;
         	this.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);        	
@@ -390,7 +390,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
    
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
-		final String u = getCurrentURI();
+		final String u = getCurrentTransportURI();
 		LOGGER.debug(u);
 		
 		if (u.toLowerCase().endsWith(".m3u")) {
