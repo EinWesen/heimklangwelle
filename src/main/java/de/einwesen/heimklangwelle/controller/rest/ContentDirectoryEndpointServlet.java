@@ -100,7 +100,7 @@ public class ContentDirectoryEndpointServlet extends HttpServlet {
 					
 					final DIDLContent content =  new DIDLContent();
 					content.addItem(item);					
-					jsonChild.put("metaDataUri", didlParser.generate(content));
+					jsonChild.put("uriMetaData", didlParser.generate(content));
 				} else {
 					throw new IllegalStateException("Items with multipole resources are not supported right now");
 				}
