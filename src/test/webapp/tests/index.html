@@ -179,7 +179,11 @@ window.sendAction = () => {
 	  }
 	}).then(({response, data}) => {
 		alert(response.status + ' ' + response.statusText);
-    }).catch(errInfo => alert('Action failed: ' + errInfo.summary));
+		console.log(data);
+    }).catch((errInfo) => {
+		console.log(errInfo);
+		alert('Action failed: ' + errInfo.summary);
+	});
 }
 
 // auto-load devices on page load
