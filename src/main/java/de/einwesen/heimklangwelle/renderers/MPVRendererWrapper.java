@@ -64,7 +64,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	private static enum ObservedProperty {
 		UNKNOWN_PROPERTY(""), 
 		PLAYLIST_COUNT("playlist-count"), 
-		PLAYLIST_POS("playlist-playing-pos-1"),
+		PLAYLIST_POS("playlist-playing-pos"),
 		PAUSE("pause"),
 		VOLUME("volume"),
 		TIME_POS("time-pos");
@@ -247,11 +247,12 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     }
     
     private void handleEvent(JSONObject event) {
-    	LOGGER.debug(event.toString());
+    	if (LOGGER.isTraceEnabled() ||  !"time-pos".equals(event.optString("name", ""))) {
+    		LOGGER.debug(event.toString());    		    		
+    	} 
     	switch(MPVEventType.fromEventName(event.optString("event", ""))) {
 	    	case START_FILE:
 	    		this.playerState = TransportState.TRANSITIONING;
-	    		this.currentTrack = event.getLong("playlist_entry_id");
 	    		this.firePlayerStateChangedEvent();
 	    		break;
 	    	case PLAYBACK_RESTART:
@@ -263,6 +264,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 				break;			
 			case IDLE:
 				if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
+					this.currentTrack = 0;
+					this.currentURI = "";
+					this.currentURIMetaData = "";
+					this.playlistSize = 0;
 					this.playerState = TransportState.STOPPED;
 					this.firePlayerStateChangedEvent();					
 				}
@@ -298,6 +303,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 						if (event.has("data")) {
 							this.currentTrackTimePos = event.getBigDecimal("data").longValue();							
 						}
+						break;
+					case PLAYLIST_POS:
+						this.currentTrack =  event.getLong("data") + 1;
+						break;
 					case UNKNOWN_PROPERTY:					
 					default:
 				}
@@ -368,8 +377,14 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         
         if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
         	this.setPlayerStateAndFire(TransportState.STOPPED);
+        	this.currentURI = "";
+        	this.currentURIMetaData = "";
+        	this.currentTrackTimePos = -1;
+        	this.currentTrack = 0;
         	this.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);        	
         }
+        
+        super.shutdown();
     }
         
    
