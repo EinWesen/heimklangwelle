@@ -44,7 +44,9 @@
 </div>
 
 <script type="module">
-import { apiFetch } from '../js/restupnp.js';
+import { apiFetch, setBaseUrl, createRendererEventSubcription } from '../js/restupnp.js';
+
+setBaseUrl('../rest');
 
 let currentEventSource = null;
 let currentUdn = null;
@@ -129,19 +131,12 @@ function subscribeToEvents(udn, deviceType) {
     }
 
 	if (deviceType == 'MediaRenderer') {
-	    const url = '../rest/renderer/' + encodeURIComponent(udn) + '/subscribe';
-	    currentEventSource = new EventSource(url);
-	
-	    currentEventSource.onmessage = (event) => {
-	        const out = document.getElementById('eventOutput');
-	        try {
-	            const obj = JSON.parse(event.data);
-	            out.textContent += JSON.stringify(obj, null, 2) + '\n';
-	        } catch (e) {
-	            out.textContent += event.data + '\n';
-	        }
-	        out.scrollTop = out.scrollHeight;
-	    };
+		
+	    currentEventSource = createRendererEventSubcription(udn, '0', (event) => {
+			console.log(event);
+			eventOutput.textContent += event.type + ':"' + event.data + '"\n';
+			eventOutput.scrollTop = eventOutput.scrollHeight;
+		});
 	
 	    currentEventSource.onerror = (err) => {
 	        console.error('EventSource error:', err);
