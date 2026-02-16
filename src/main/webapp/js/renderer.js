@@ -39,7 +39,8 @@ export class RemoteRenderer {
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
-	this._titleElement = document.getElementById(options["track-title"]);
+	this._titleElement = document.getElementById(options["transport-title"]);
+	this._trackTitleElement = document.getElementById(options["track-title"]);
 	this._timeElement = document.getElementById(options["time-info"]);
 	this._volumeElement = document.getElementById(options["volume-slider"]);
 	this._stateElement = document.getElementById(options["transport-state"]);
@@ -106,18 +107,32 @@ export class RemoteRenderer {
 	this._stateElement.textContent = this._properties['TransportState'];
 	this._volumeElement.value = this._properties['Volume'];
 		
-	let title = undefined;
+	let transportTitle = undefined;
 	
-	if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '') {
-		title = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
-	} else if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '') {
-		title = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
-	} else if (this._properties['CurrentTrackURI'] != '') {
-		title = this._properties['CurrentTrackURI'];
-	} else {
-		title = this._properties['AVTransportURI'];		
+	if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '') {
+		transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
 	}
-	this._titleElement.textContent = title;
+	if (!transportTitle) {
+		transportTitle = this._properties['AVTransportURI'];		
+	}
+	
+	let trackTitle = undefined;
+	
+	if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
+		if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '') {
+			trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
+		}
+		if (!trackTitle) {
+			trackTitle = this._properties['CurrentTrackURI'];	
+		} else {
+			trackTitle = ' | ' + trackTitle;
+		}
+	} else {
+		trackTitle = '';
+	}
+
+	this._titleElement.textContent = transportTitle;
+	this._trackTitleElement.textContent = trackTitle;
 	
   }
     

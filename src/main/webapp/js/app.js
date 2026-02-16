@@ -17,6 +17,7 @@ const MEDIARENDERER = new RemoteRenderer({
 	'volume-slider' : 'volume-slider',
 	'transport-state' : 'transport-state',
 	'time-info' : 'time-info',
+	'transport-title' : 'transport-title',
 	'track-title' : 'track-title',
 });
 
