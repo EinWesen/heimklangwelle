@@ -1,6 +1,16 @@
 package de.einwesen.heimklangwelle.renderers;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -242,7 +252,60 @@ public abstract class AbstractRendererWrapper {
 			LOGGER.debug("Could generate currentTransportURIMetaData: " + e.toString() );
 			return "";
 		}
+	}
+	
+	protected List<String> parseSubTrackMetaData(String m3uUrl) {
+		final ArrayList<String> result = new ArrayList<>();
+		final DIDLParser parser = new DIDLParser();
+		final String idSuffix = UUID.randomUUID().toString();
+		
+		InputStream is;
+		try {
+			is = HttpClient.newHttpClient().send(
+					HttpRequest.newBuilder(URI.create(m3uUrl)).GET().build(),
+					HttpResponse.BodyHandlers.ofInputStream()).body();
+		
+	        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+	            String line;
+	            String lastFoundTitle = null;
 
+	            while ((line = reader.readLine()) != null) {
+	                line = line.strip();
+	                if (line.isEmpty()) continue;
+
+	                if (line.startsWith("#EXTINF:")) {
+	                    // Parse title after comma
+	                    int commaIndex = line.indexOf(',');
+	                    lastFoundTitle = (commaIndex >= 0) ? line.substring(commaIndex + 1).strip() : null;
+	                } else if (line.startsWith("#")) {
+	                    // other comment lines, ignore
+	                    continue;
+	                } else {
+	                    // URI line
+	            		final AudioItem audioItem = new AudioItem();
+	            		audioItem.setRestricted(true);
+	            		audioItem.setId("-1_" + result.size()+"_"+idSuffix);
+	            		audioItem.setParentID("-1");
+	            		if (lastFoundTitle != null) {
+	            			audioItem.setTitle(lastFoundTitle);	            			
+	            		} else {
+	            			audioItem.setTitle(line);
+	            		}
+	            		final DIDLContent content = new DIDLContent();
+	            		content.addItem(audioItem);
+	                	result.add(parser.generate(content));
+	            		
+	                    lastFoundTitle = null;
+	                }
+	            }
+	        }
+			
+		} catch (Throwable t) {
+			LOGGER.debug("Coudl not parse m3u '"+m3uUrl+"'" , t);
+			result.clear();
+		}
+
+		return result;		
 	}
 	
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;

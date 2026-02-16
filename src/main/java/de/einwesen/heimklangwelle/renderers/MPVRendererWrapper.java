@@ -1,9 +1,11 @@
 package de.einwesen.heimklangwelle.renderers;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -98,9 +100,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     private volatile long volume = 100;  
     private volatile long preMuteVolume = -1;
     private volatile long currentTrack = 0;
-    private volatile long currentTrackTimePos = -1;
-    
+    private volatile long currentTrackTimePos = -1;       
     private volatile long playlistSize = 0;
+    private volatile List<String> currentPlaylistMetaData = Collections.synchronizedList(new ArrayList<>());
+    
     private volatile String version = this.getClass().getName();
     
     private RollingSequence requestIdSeq = new RollingSequence(0, 100, 0);
@@ -311,8 +314,16 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 					case PLAYLIST_ITEM_PATH: {						
 						final String trackUri = event.optString("data", ""); 
 						if (!this.currentTransportURI.equals(trackUri) && !"".equals(trackUri)) {
-							this.currentTrackURI = trackUri;
-							this.currentTrackURIMetaData = generateSubTrackMetaData();
+							this.currentTrackURI = trackUri;						
+							if (this.currentPlaylistMetaData.size() > 0 ) {
+								try {
+									this.currentTrackURIMetaData = this.currentPlaylistMetaData.get(Long.valueOf(this.currentTrack-1).intValue());
+								} catch (ArrayIndexOutOfBoundsException a) {
+									this.currentTrackURIMetaData = generateSubTrackMetaData();
+								}
+							} else {
+								this.currentTrackURIMetaData = generateSubTrackMetaData();
+							}
 						} else {
 							this.currentTrackURI = null;
 							this.currentTrackURIMetaData = null;
@@ -402,15 +413,19 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
    
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
+		this.currentPlaylistMetaData.clear();
+		
 		final String u = getCurrentTransportURI();
 		LOGGER.debug(u);
-		
-		if (u.toLowerCase().endsWith(".m3u")) {
+
+		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
+			this.currentPlaylistMetaData.addAll(parseSubTrackMetaData(u));
+			this.playlistSize = this.currentPlaylistMetaData.size();
 			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
 		} else {
+			this.playlistSize = 1;	
 			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
 		}
-		this.playlistSize = 1;	
 		
 		this.firePlayerStateChangedEvent();
 	}    
