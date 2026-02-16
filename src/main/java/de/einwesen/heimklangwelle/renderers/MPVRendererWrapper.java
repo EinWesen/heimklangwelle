@@ -100,7 +100,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     private volatile long volume = 100;  
     private volatile long preMuteVolume = -1;
     private volatile long currentTrack = 0;
-    private volatile long currentTrackTimePos = -1;       
+    private volatile long currentTrackTimePos = 0;       
     private volatile long playlistSize = 0;
     private volatile List<String> currentPlaylistMetaData = Collections.synchronizedList(new ArrayList<>());
     
@@ -402,7 +402,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         	this.setPlayerStateAndFire(TransportState.STOPPED);
         	this.currentTransportURI = "";
         	this.currentTransportURIMetaData = "";
-        	this.currentTrackTimePos = -1;
+        	this.currentTrackTimePos = 0;
         	this.currentTrack = 0;
         	this.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);        	
         }
@@ -414,10 +414,12 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	@Override
 	public void loadCurrentContent() throws AVTransportException {
 		this.currentPlaylistMetaData.clear();
+		this.currentTrackTimePos = 0;
 		
 		final String u = getCurrentTransportURI();
 		LOGGER.debug(u);
 
+		//FIXME: State if broken if this fails
 		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
 			this.currentPlaylistMetaData.addAll(parseSubTrackMetaData(u));
 			this.playlistSize = this.currentPlaylistMetaData.size();
