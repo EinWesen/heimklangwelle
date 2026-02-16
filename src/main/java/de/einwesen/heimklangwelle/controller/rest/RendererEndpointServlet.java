@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
+import de.einwesen.heimklangwelle.controller.GetPositionInfoCallbackFuture;
 import de.einwesen.heimklangwelle.controller.RendererSubscriptionPublisherCallback;
 
 public class RendererEndpointServlet extends HttpServlet {
@@ -73,7 +74,7 @@ public class RendererEndpointServlet extends HttpServlet {
         final Object writeLock = new Object();
         final AtomicBoolean closed = new AtomicBoolean(false);
         final ArrayList<SubscriptionCallback> callbacks = new ArrayList<>(2);
-        final ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
+        final ScheduledExecutorService relPosAndHeartBeat = Executors.newSingleThreadScheduledExecutor();
 
         // --- START ASYNC ---
         final AsyncContext async = req.startAsync();
@@ -93,7 +94,7 @@ public class RendererEndpointServlet extends HttpServlet {
         final Runnable cleanup = () -> {
             if (!closed.compareAndSet(false, true)) return;
             LOGGER.debug("Doing cleanup for: " + remoteHost);
-            heartbeat.shutdownNow();
+            relPosAndHeartBeat.shutdownNow();
             callbacks.forEach(callback -> callback.end());
             async.complete();
         };        
@@ -107,8 +108,9 @@ public class RendererEndpointServlet extends HttpServlet {
         });
         
         // schedule a heartbeat
-        heartbeat.scheduleAtFixedRate(() -> {
+        relPosAndHeartBeat.scheduleAtFixedRate(() -> {
             if (closed.get()) return;
+            
             try {
                 synchronized (writeLock) {
                     writer.write(":\n\n"); // SSE comment heartbeat
@@ -116,8 +118,26 @@ public class RendererEndpointServlet extends HttpServlet {
                 }
             } catch (Throwable e) {
                 cleanup.run();
+                return;
             }
-        }, 15, 15, TimeUnit.SECONDS);  
+            
+            try {
+				final GetPositionInfoCallbackFuture posCallback = new GetPositionInfoCallbackFuture(avTransport);
+				final String relTime = HeimklangServiceRegistry.getInstance().execute(posCallback).get(5, TimeUnit.SECONDS).getRelTime();
+	            try {
+	                synchronized (writeLock) {
+        	        	writer.write("event: RelativeTimePosition\n");
+        	            writer.write("data: "+relTime+"\n\n");
+        	        }
+	            } catch (Throwable e) {
+	                cleanup.run();
+	                return;
+	            }				
+			} catch (Throwable t) {
+				LOGGER.debug("Getting PosInfo failed", t);
+			}            
+            
+        }, 15, 5, TimeUnit.SECONDS);  
         
         synchronized (writeLock) {
         	writer.write("event: X_PROPERTIES\n");
