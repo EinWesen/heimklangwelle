@@ -67,7 +67,8 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 		PLAYLIST_POS("playlist-playing-pos"),
 		PAUSE("pause"),
 		VOLUME("volume"),
-		TIME_POS("time-pos");
+		TIME_POS("time-pos"),
+		PLAYLIST_ITEM_PATH("path");
 		
 		private final String propertyName;
 		ObservedProperty(String s) {
@@ -307,6 +308,17 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 					case PLAYLIST_POS:
 						this.currentTrack =  event.getLong("data") + 1;
 						break;
+					case PLAYLIST_ITEM_PATH: {						
+						final String trackUri = event.optString("data", ""); 
+						if (!this.currentTransportURI.equals(trackUri) && !"".equals(trackUri)) {
+							this.currentTrackURI = trackUri;
+							this.currentTrackURIMetaData = generateSubTrackMetaData();
+						} else {
+							this.currentTrackURI = null;
+							this.currentTrackURIMetaData = null;
+						}
+						break;
+					}
 					case UNKNOWN_PROPERTY:					
 					default:
 				}

@@ -8,10 +8,14 @@ import java.util.concurrent.TimeUnit;
 
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.avtransport.AVTransportException;
+import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.Channel;
+import org.jupnp.support.model.DIDLContent;
 import org.jupnp.support.model.TransportAction;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.model.TransportStatus;
+import org.jupnp.support.model.item.AudioItem;
+import org.jupnp.support.model.item.Item;
 import org.jupnp.support.renderingcontrol.RenderingControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +31,9 @@ public abstract class AbstractRendererWrapper {
 	
 	protected volatile String currentTransportURI = ""; 
 	protected volatile String currentTransportURIMetaData = "";
+	protected volatile String currentTrackURI = ""; 
+	protected volatile String currentTrackURIMetaData = "";
+	
 	protected volatile boolean ready = false;
 	
 	protected ArrayList<RendererChangeEventListener> changeListeners = new ArrayList<>();
@@ -180,6 +187,64 @@ public abstract class AbstractRendererWrapper {
 		this.eventScheduler.shutdownNow();
 	}
 
+	public String getCurrentTrackURI() {
+		if (this.currentTrackURI != null) {
+			return this.currentTrackURI;			
+		} else {
+			return this.currentTransportURI;
+		}
+	}
+
+	public String getCurrentTrackURIMetaData() {
+		if (this.currentTrackURIMetaData != null) {
+			return this.currentTrackURIMetaData;			
+		} else {
+			return this.currentTransportURIMetaData;
+		}
+	}
+
+	protected String generateSubTrackMetaData() {
+		final DIDLParser parser = new DIDLParser();
+		
+		String trackDisplay = " [?/?]";
+		long currentTrack = -1;		
+		try {
+			currentTrack = this.getCurrentTrack();
+			trackDisplay = " ["+ currentTrack + " / "+  this.getPlaylistSize() +"]"; 			
+		} catch (Throwable t) {
+			LOGGER.debug("Could not get currentTrackInfo: " + t.toString() );
+		}
+		
+		String title = this.currentTransportURI + trackDisplay;
+		String transportId = null;
+		if (this.currentTransportURIMetaData != null) {
+			try {
+				final DIDLContent content = parser.parse(this.currentTransportURIMetaData);
+				final Item item =  content.getItems().get(0);
+				title = item.getTitle() + trackDisplay;
+				transportId = item.getId();
+			} catch (Throwable t) {
+				LOGGER.debug("Could not parse currentTrackURIMetaData: " + t.toString() );
+			}
+		}
+		
+		final AudioItem audioItem = new AudioItem();
+		audioItem.setId("-1_" + transportId + "_" + currentTrack);
+		audioItem.setParentID("-1");
+		audioItem.setTitle(title);
+		audioItem.setRestricted(true);
+		
+		try {
+			DIDLContent result = new DIDLContent();
+			result.addItem(audioItem);
+			return parser.generate(result);		
+		} catch (Throwable e) {
+			LOGGER.debug("Could generate currentTransportURIMetaData: " + e.toString() );
+			return "";
+		}
+
+	}
+	
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;
 	public abstract void setMute(Channel channel, boolean desiredMute)  throws RenderingControlException;
 	public abstract void setVolume(Channel channel, long desiredVolume) throws RenderingControlException;

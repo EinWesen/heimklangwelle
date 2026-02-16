@@ -24,8 +24,10 @@ import de.einwesen.heimklangwelle.upnpsupport.LastChangeAwareSubscriptionCallbac
 public abstract class RendererSubscriptionPublisherCallback extends LastChangeAwareSubscriptionCallback {
 	public static final String[] SUPPORTED_PROPERTIES = {
 			"AVTransportURIMetaData",
+			"CurrentTrackMetaData",
 			"RelativeTimePosition",
 			"AVTransportURI",
+			"CurrentTrackURI",
 			"CurrentTrack",
 			"NumberOfTracks",
 			"TransportState",
@@ -66,10 +68,12 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 		
 		switch (eventedValue.getName()) {
 			case "AVTransportURIMetaData":
+			case "CurrentTrackMetaData":
 			case "RelativeTimePosition":
 				value = getNonNullString(eventedValue.getValue());
 				break;
-			case "AVTransportURI":				
+			case "AVTransportURI":
+			case "CurrentTrackURI":				
 				value = getNonNullString((URI)eventedValue.getValue());
 				break;
 			case "CurrentTrack":
@@ -98,12 +102,10 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 				break;
 			case "TransportStatus":
 			case "CurrentMediaDuration":
-			case "CurrentPlayMode":
-			case "CurrentTrackURI":
+			case "CurrentPlayMode":			
 			case "CurrentTransportActions":
 			case "CurrentRecordQualityMode":
-			case "CurrentTrackDuration":
-			case "CurrentTrackMetaData":
+			case "CurrentTrackDuration":			
 			case "PossiblePlaybackStorageMedia":
 			case "PossibleRecordQualityModes":
 			case "PossibleRecordStorageMedia":

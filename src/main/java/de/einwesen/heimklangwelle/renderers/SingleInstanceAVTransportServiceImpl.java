@@ -291,7 +291,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 		 * - Source: Either extracted from AVTransportURIMetaData or directly from the resource binary itself (e.g., ID3 tags in MP3 files). Implementation dependent.
 		 * - Value if not supported: "NOT_IMPLEMENTED". 
 		 */  		
-	    final String trackMetaData = "NOT_IMPLEMENTED";
+	    final String trackMetaData = this.backendInstance.getCurrentTrackURIMetaData();
 	    
 	    /*
 	     *  CurrentTrackURI: This state variable holds a URI reference to the current track. 
@@ -301,7 +301,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	     *  If the media contains multiple tracks but doesn't have individual URIs for each,
 	     * CurrentTrackURI is set to AVTransportURI.
 	     */ 
-	    final String trackURI = this.backendInstance.getCurrentTransportURI();
+	    final String trackURI = this.backendInstance.getCurrentTrackURI();
 	    
 	    /*
 	     *  The current position in the media, measured from a zero reference point. 

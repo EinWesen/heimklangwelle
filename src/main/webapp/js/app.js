@@ -82,8 +82,9 @@ async function init() {
 	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
 		MEDIARENDERER.setAVTransportItem(event.detail).then((apiResult) => {
 			MEDIARENDERER.play();
-		}).catch(() => {
+		}).catch((errorInfo) => {
 			// Error is already reporte dinternall
+			console.error(errorInfo);
 			return;
 		});
 	});	

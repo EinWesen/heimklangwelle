@@ -71,6 +71,8 @@ export class RemoteRenderer {
 	this._properties = {
 		'AVTransportURI': '',
 		'AVTransportURIMetaData': '',
+		'CurrentTrackURI': '',
+		'CurrentTrackMetaData': '',
 		'CurrentTrack': '',
 		'NumberOfTracks': '',
 		'TransportState': 'STOPPED',
@@ -105,11 +107,15 @@ export class RemoteRenderer {
 	this._volumeElement.value = this._properties['Volume'];
 		
 	let title = undefined;
-	if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '') {
+	
+	if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '') {
+		title = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
+	} else if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '') {
 		title = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
-	} 
-	if (!title) {
-		title = this._properties['AVTransportURI'];
+	} else if (this._properties['CurrentTrackURI'] != '') {
+		title = this._properties['CurrentTrackURI'];
+	} else {
+		title = this._properties['AVTransportURI'];		
 	}
 	this._titleElement.textContent = title;
 	
