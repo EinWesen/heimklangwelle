@@ -18,15 +18,17 @@ h1 {
 }
 
 .player-panel {
-    
+	user-select: none;
     background: #f5f5f5;
 	border-right: 1px solid #ccc;
 }
 
 .browser-panel {
+	user-select: none;
 	border-top: 1px solid #ccc;
 }
 .playlist-panel {
+	user-select: none;
 	border: 1px solid #ccc;
 }
 
