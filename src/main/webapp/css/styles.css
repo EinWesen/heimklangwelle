@@ -57,10 +57,6 @@ h1 {
     margin-right: 8px;
 }
 
-.folder-list li:hover {
-    background: #e6f0ff;
-    border-color: #a0c4ff;
-}
 
 .folder-list li:active {
     background: #cce0ff;
@@ -70,6 +66,10 @@ h1 {
     background: #fafafa;
 }
 
+.folder-list li:hover {
+    background: #e6f0ff;
+    border-color: #a0c4ff;
+}
 
 .toast {
   position: fixed;
