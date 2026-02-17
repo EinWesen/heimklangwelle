@@ -1,10 +1,11 @@
 import * as api from "./restupnp.js";
 
-function createBrowserLi(className, iconChar, title) {
+function createBrowserLi(className, iconChar, title, itemtype) {
 	const li = document.createElement("li");
 	li.classList.add(className);
 	li.appendChild(document.createElement("span")).textContent = iconChar;
 	li.appendChild(document.createElement("span")).textContent = title;	
+	li.dataset.itemtype = itemtype; 			            
 	return li;
 }
 
@@ -13,15 +14,14 @@ function renderBrowser(browserInstance) {
     list.innerHTML = "";
 
     if (browserInstance._pathStack.length > 1) {
-        list.appendChild(createBrowserLi('back', '↩', '..')).onclick = (event) => {browserInstance.navigateUp()};
+        list.appendChild(createBrowserLi('back', '↩', '..', 'back'));
     }
 
     browserInstance._items.forEach((item, index) => {
         let li = undefined;
 					
         if (item.isContainer) {
-			li = createBrowserLi('folder', '📁', item.title)            
-			li.dataset.itemtype = 0; 			            
+			li = createBrowserLi('folder', '📁', item.title, 'container')            
         } else {
 			let fileicon = '📄';
 			
@@ -32,9 +32,7 @@ function renderBrowser(browserInstance) {
 			    fileicon = '🎬';
 			} 
 			
-			li = createBrowserLi('file', fileicon, item.title)
-			
-			li.dataset.itemtype = 1;
+			li = createBrowserLi('file', fileicon, item.title, 'item')			
         }
         
 		li.dataset.itemindex = index;
@@ -53,10 +51,19 @@ export class ContentServerBrowser {
 	this._containerElement.addEventListener("dblclick", (event) => {
 	  const li = event.target.closest("li");
 	  const item = this._items[li.dataset.itemindex];
-	  if (li.dataset.itemtype == 0) {
-	     this.browse(item);
-	  } else {
-	     this._triggerDblClick(item);		
+	  switch(li.dataset.itemtype) {
+	  	case 'back':
+			this.navigateUp();
+			return true;
+		case 'container':
+	     	this.browse(item);
+			return true;
+		case 'item':
+	     	this._triggerDblClick(item);
+			return true;
+		default:
+			alert("Unknown itemtype" + li.dataset.itemtype);
+			return false;		
 	  }
 	});
   }
