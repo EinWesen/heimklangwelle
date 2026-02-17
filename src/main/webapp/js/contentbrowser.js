@@ -16,12 +16,12 @@ function renderBrowser(browserInstance) {
         list.appendChild(createBrowserLi('back', '↩', '..')).onclick = (event) => {browserInstance.navigateUp()};
     }
 
-    browserInstance._items.forEach(item => {
+    browserInstance._items.forEach((item, index) => {
         let li = undefined;
 					
         if (item.isContainer) {
 			li = createBrowserLi('folder', '📁', item.title)            
-            li.onclick = () => browserInstance.browse(item);
+			li.dataset.itemtype = 0; 			            
         } else {
 			let fileicon = '📄';
 			
@@ -32,10 +32,12 @@ function renderBrowser(browserInstance) {
 			    fileicon = '🎬';
 			} 
 			
-			li = createBrowserLi('file', fileicon, item.title)			
-            li.ondblclick = () => browserInstance._triggerDblClick( item );	
+			li = createBrowserLi('file', fileicon, item.title)
+			
+			li.dataset.itemtype = 1;
         }
         
+		li.dataset.itemindex = index;
         list.appendChild(li);
     });
 }
@@ -43,10 +45,20 @@ function renderBrowser(browserInstance) {
 export class ContentServerBrowser {
   static EVENT_NAME_DBLCLICKITEM = 'dblclickItem';
   constructor(htmlListId) {
-    this._containerElement = document.getElementById(htmlListId);	
 	this._deviceUdn = undefined;
 	this._pathStack = [];
 	this._items = []
+    this._containerElement = document.getElementById(htmlListId);	
+	
+	this._containerElement.addEventListener("dblclick", (event) => {
+	  const li = event.target.closest("li");
+	  const item = this._items[li.dataset.itemindex];
+	  if (li.dataset.itemtype == 0) {
+	     this.browse(item);
+	  } else {
+	     this._triggerDblClick(item);		
+	  }
+	});
   }
   
   async selectDevice(udn) {
