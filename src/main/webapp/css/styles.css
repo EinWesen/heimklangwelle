@@ -39,13 +39,13 @@ h1 {
 }
 
 
-.folder-list {
+.item-list {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.folder-list li {
+.item-list li {
     display: flex;
     align-items: center;
     padding: 8px 12px;
@@ -58,15 +58,15 @@ h1 {
 }
 
 
-.folder-list li:active {
+.item-list li:active {
     background: #cce0ff;
 }
 
-.folder-list li:nth-child(even) {
+.item-list li:nth-child(even) {
     background: #fafafa;
 }
 
-.folder-list li:hover {
+.item-list li:hover {
     background: #e6f0ff;
     border-color: #a0c4ff;
 }
