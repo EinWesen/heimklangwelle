@@ -101,39 +101,37 @@ export class RemoteRenderer {
 	
   }
   
-  _remotePropertyChanged() {
-	// TODO: Needs debouncing	
-	this._timeElement.textContent = this._properties['RelativeTimePosition'];
-	this._stateElement.textContent = this._properties['TransportState'];
-	this._volumeElement.value = this._properties['Volume'];
-		
-	let transportTitle = undefined;
+  _remotePropertyChanged() {	
+	  this._timeElement.textContent = this._properties['RelativeTimePosition'];
+	  this._stateElement.textContent = this._properties['TransportState'];
+	  this._volumeElement.value = this._properties['Volume'];
+	  	
+	  let transportTitle = undefined;
 	
-	if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '') {
-		transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
-	}
-	if (!transportTitle) {
-		transportTitle = this._properties['AVTransportURI'];		
-	}
+	  if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '' && this._properties['AVTransportURIMetaData'] != 'NOT_IMPLEMENTED') {
+	  	transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
+	  }
+	  if (!transportTitle) {
+	  	transportTitle = this._properties['AVTransportURI'];		
+	  }
 	
-	let trackTitle = undefined;
+	  let trackTitle = undefined;
 	
-	if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
-		if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '') {
-			trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
-		}
-		if (!trackTitle) {
-			trackTitle = this._properties['CurrentTrackURI'];	
-		} else {
-			trackTitle = ' | ' + trackTitle;
-		}
-	} else {
-		trackTitle = '';
-	}
-
-	this._titleElement.textContent = transportTitle;
-	this._trackTitleElement.textContent = trackTitle;
+	  if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
+	  	if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '' && this._properties['CurrentTrackMetaData'] != 'NOT_IMPLEMENTED') {
+	  		trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
+	  	}
+	  	if (!trackTitle) {
+	  		trackTitle = this._properties['CurrentTrackURI'];	
+	  	} else {
+	  		trackTitle = ' | ' + trackTitle;
+	  	}
+	  } else {
+	  	trackTitle = '';
+	  }
 	
+	  this._titleElement.textContent = transportTitle;
+	  this._trackTitleElement.textContent = trackTitle;
   }
     
   async play() {
