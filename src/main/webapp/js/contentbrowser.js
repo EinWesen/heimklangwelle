@@ -26,12 +26,11 @@ function renderBrowser(browserInstance) {
 			let fileicon = '📄';
 			
 			// Add type-specific class
-			if (item.mimeType?.startsWith("audio/")) {
+			if (item.mimeType?.startsWith("audio")) {
 			    fileicon = '🎵';
-			} else if (item.mimeType?.startsWith("video/")) {
+			} else if (item.mimeType?.startsWith("video")) {
 			    fileicon = '🎬';
 			} 
-			
 			li = createBrowserLi('file', fileicon, item.title, 'item')			
         }
         
