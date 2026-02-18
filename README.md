@@ -3,7 +3,7 @@
 This project aims to be a simple all-in-one solution to share (audio) media locally in your lan by providing 
 a renderer (a player) to play media on, a very simple controlpoint that enables you to select files to play (via web),  lastly a media server as well.
 
-The goal is to keep it simple in every way. Not only only easy to use, but also only basic in functionality.
+The goal is to keep it simple in every way. Not only easy to use, but also only basic in functionality.
 At the moment i do not intend to implement everything the DNLA®️ standard has to offer, or advanced feature like full blown media libraries or on the fly transcoding. It's the app you fire up, when you need to stream you files real quick once in a while.
 
 ## But why? - Use case
@@ -22,7 +22,8 @@ Is this best way to solve that problem? - Of course not! There are so many easie
     - [x] Enhance the IPC class to work on linux ( = posix?)
 - [x] Controlpoint
     - [x] Implement backend to handle UPNP-communication with mediaservers
-    - [ ] Implement WebPlayer UI
+    - [x] Implement WebPlayer UI
+    - [ ] Implement autoplay for playlist
 - [x] Mediaserver
     - [x] Implement mediaserver service infrastruture
     - [x] Implement the actual contentlisting (on disk) and serving
