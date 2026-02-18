@@ -4,8 +4,15 @@ function createBrowserLi(className, iconChar, title, itemtype) {
 	const li = document.createElement("li");
 	li.classList.add(className);
 	li.appendChild(document.createElement("span")).textContent = iconChar;
-	li.appendChild(document.createElement("span")).textContent = title;	
-	li.dataset.itemtype = itemtype; 			            
+	li.appendChild(document.createElement("span")).textContent = title;
+	
+	if (itemtype == 'item') {
+		const playSpan = li.appendChild(document.createElement("span"));
+		playSpan.innerHTML = '&#9654;';
+		playSpan.classList.add('play');	
+	}
+	
+	li.dataset.itemtype = itemtype; 			            		
 	return li;
 }
 
@@ -58,7 +65,7 @@ export class ContentServerBrowser {
 	     	this.browse(item);
 			return true;
 		case 'item':
-	     	this._triggerDblClick(item);
+	     	this._triggerDblClick(item, (event.target.closest('.play') != null));
 			return true;
 		default:
 			alert("Unknown itemtype" + li.dataset.itemtype);
@@ -104,9 +111,9 @@ export class ContentServerBrowser {
 	this._containerElement.addEventListener(type, listener);
   }
   
-  _triggerDblClick(item) {
+  _triggerDblClick(item, play) {
 	this._containerElement.dispatchEvent(
-	    new CustomEvent(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, { detail: item })
+	    new CustomEvent(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, { detail: { item: item, play: play }})
 	);	
   } 
   

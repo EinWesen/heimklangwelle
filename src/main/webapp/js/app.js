@@ -92,15 +92,15 @@ async function init() {
 			console.error(errorInfo);
 			return;
 		});
-	});	
+	});
 	
 	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
-		const playlistindex = MEDIARENDERER.addToPlaylist(event.detail, false);
+		const playlistindex = MEDIARENDERER.addToPlaylist(event.detail.item, event.detail.play);
 		if (playlistindex === 0) {
-			MEDIARENDERER.setAVTransportItem(event.detail).then((apiResult) => {
+			MEDIARENDERER.setAVTransportItem(event.detail.item).then((apiResult) => {
 				;
 			}).catch((errorInfo) => {
-				// Error is already reporte dinternall
+				// Error is already reported internally
 				console.error(errorInfo);
 				return;
 			});
@@ -108,7 +108,7 @@ async function init() {
 			showToast("Item is already in the playlist");
 		}
 	});	
-	
+			
 	document.getElementById(SERVER_SELECT_ID).onchange = (event) => {
 		CONTENTBROWSER.selectDevice(event.target.value == '-' ? undefined : event.target.value);
 	};

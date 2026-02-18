@@ -85,6 +85,13 @@ h1 {
 	flex: 1;	
 }
 
+#folder-list.item-list li {
+  	justify-content: space-between; /* Verteilt Spans an die Ränder */     
+}
+#folder-list.item-list li span:nth-child(2) {
+	flex: 1;	
+}
+
 .toast {
   position: fixed;
   top: 20px;
