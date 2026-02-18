@@ -36,10 +36,51 @@ h1 {
 	margin-left: 5px;
 }
 
+
 .transport-controls {
 	margin-top: 4px;
+	margin-bottom: 4px;
 }
 
+.transport-controls button {
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.transport-controls button:hover {
+  transform: scale(1.2);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+.volume-controls {
+	display: flex;
+	align-items: center;	
+}
+
+#btn-mute {
+	width: 70px;
+	height: 30px;
+	border-radius: 99%;
+	border: none;
+	cursor: pointer;
+	justify-content: center;
+	align-items: center;
+	transition: transform 0.2s, box-shadow 0.2s;
+	box-shadow: 0 4px 8px rgba(0,0,0,0.3);	
+}
+
+#btn-mute:hover {
+	transform: scale(1.2);
+	box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
 
 .item-list {
     list-style: none;
