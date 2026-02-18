@@ -59,16 +59,15 @@ h1 {
     margin-right: 8px;
 }
 
-
-.item-list li:active {
-    background: #cce0ff;
-}
-
 .item-list li:nth-child(even) {
     background: #fafafa;
 }
 
-.item-list li:hover {
+.item-list li.active {
+    background: #A0C4FF;
+}
+
+.item-list li:hover, .item-list li.active:hover {
     background: #e6f0ff;
     border-color: #a0c4ff;
 }

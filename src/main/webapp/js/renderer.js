@@ -25,17 +25,42 @@ function tryParseTitleFromDidl(metaData) {
 	return undefined;
 }
 
+function createPlaylistLi(item, index) {
+	const li = document.createElement("li");
+	li.textContent = item.title;
+	
+	li.draggable = true;
+	li.dataset.itemindex = index;
+
+/*	li.addEventListener("dragstart", e => {
+	    draggedIndex = Number(e.target.dataset.index);
+	});
+
+	li.addEventListener("dragover", e => e.preventDefault());
+
+	li.addEventListener("drop", e => {
+	    e.preventDefault();
+	    const targetIndex = Number(e.target.dataset.index);
+	    reorder(draggedIndex, targetIndex);
+	});
+*/		
+	return li;
+}
+
 export class RemoteRenderer { 
   static EVENT_NAME_ACTIONFAILED = 'actionFailed';
+  static EVENT_NAME_PLAYLIST_DBLCLICK = 'PlaylistDblClick';
   
   constructor(options) {
 	this._deviceUdn = undefined;
 	this._instanceId = undefined;
 	this._properties = undefined;		
-	this._eventSource = undefined;	
+	this._eventSource = undefined;
+	this._playlist = undefined;		
 	
 	this._volDebounceTimer = undefined;
 	this._stateDebounceTimer = undefined;
+	this._currentPlaylistItemUrl = ''; 
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
@@ -45,6 +70,8 @@ export class RemoteRenderer {
 	this._volumeElement = document.getElementById(options["volume-slider"]);
 	this._stateElement = document.getElementById(options["transport-state"]);
 		
+	this._playlistContainerElement = document.getElementById(options["playlist-container"]);
+	
 	this.selectDevice(undefined, undefined);
 	
 	document.getElementById(options["btn-play"]).onclick = (event) => this.play();
@@ -52,12 +79,22 @@ export class RemoteRenderer {
 	document.getElementById(options["btn-stop"]).onclick = (event) => this.stop();
 	document.getElementById(options["btn-next"]).onclick = (event) => this.next();
 	document.getElementById(options["btn-prev"]).onclick = (event) => this.previous();
+	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia();
+	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia();	
+	
 	this._volumeElement.oninput = (event) => {
 	   clearTimeout(this._volDebounceTimer);	
 	   this._volDebounceTimer = setTimeout(() => {
 	      this.setVolume(event.target.value);
 	   }, 500); // adjust delay as needed
 	};
+	
+	this._playlistContainerElement.addEventListener("dblclick", (event) => {
+	   const li = event.target.closest("li");
+	   this._containerElement.dispatchEvent(
+	   		new CustomEvent(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, {detail : this._playlist[li.dataset.itemindex]})
+	   );		   
+	});
 	
   }
   
@@ -82,7 +119,8 @@ export class RemoteRenderer {
 		'RelativeTimePosition': ''
 	}
 	this._remotePropertyChanged();
-
+	this.newPlaylist();
+	
 	if (this._deviceUdn) {
 		this._eventSource = api.createRendererEventSubcription(udn, '0', (event) => {
 			this._properties[event.type] = event.data;
@@ -99,39 +137,68 @@ export class RemoteRenderer {
 	    }			
 	}
 	
-  }
+  }  
   
   _remotePropertyChanged() {	
-	  this._timeElement.textContent = this._properties['RelativeTimePosition'];
-	  this._stateElement.textContent = this._properties['TransportState'];
-	  this._volumeElement.value = this._properties['Volume'];
-	  	
-	  let transportTitle = undefined;
+	this._timeElement.textContent = this._properties['RelativeTimePosition'];
+	this._stateElement.textContent = this._properties['TransportState'];
+	this._volumeElement.value = this._properties['Volume'];
 	
-	  if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '' && this._properties['AVTransportURIMetaData'] != 'NOT_IMPLEMENTED') {
-	  	transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
-	  }
-	  if (!transportTitle) {
-	  	transportTitle = this._properties['AVTransportURI'];		
-	  }
+	// Update tranport title display
+	let transportTitle = undefined;
 	
-	  let trackTitle = undefined;
+	if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '' && this._properties['AVTransportURIMetaData'] != 'NOT_IMPLEMENTED') {
+		transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
+	}
+	if (!transportTitle) {
+		transportTitle = this._properties['AVTransportURI'];		
+	}
+	this._titleElement.textContent = transportTitle;
 	
-	  if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
-	  	if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '' && this._properties['CurrentTrackMetaData'] != 'NOT_IMPLEMENTED') {
-	  		trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
-	  	}
-	  	if (!trackTitle) {
-	  		trackTitle = this._properties['CurrentTrackURI'];	
-	  	} else {
-	  		trackTitle = ' | ' + trackTitle;
-	  	}
-	  } else {
-	  	trackTitle = '';
-	  }
 	
-	  this._titleElement.textContent = transportTitle;
-	  this._trackTitleElement.textContent = trackTitle;
+	
+	// Update track title display
+	let trackTitle = undefined;	
+	
+	if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
+		if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '' && this._properties['CurrentTrackMetaData'] != 'NOT_IMPLEMENTED') {
+			trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
+		}
+		if (!trackTitle) {
+			trackTitle = this._properties['CurrentTrackURI'];	
+		} else {
+			trackTitle = ' | ' + trackTitle;
+		}
+	} else {
+		trackTitle = '';
+	}
+
+	this._trackTitleElement.textContent = trackTitle;
+	
+	
+	// Mark current track in playlist, if possible
+	const transportUri = this._properties['CurrentTrackURI'];
+	let trackUri = this._properties['CurrentTrackURI'];
+	if (trackUri == '') {
+		trackUri = transportUri;		
+	}
+	
+	if (this._playlist && this._playlist.length > 0) {
+		if (trackUri != this._currentPlaylistItemUrl) {
+			this._currentPlaylistItemUrl = trackUri;		
+			const playlistNodes = this._playlistContainerElement.children;
+			for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
+				if (this._playlist[itemIndex].uri == trackUri || this._playlist[itemIndex].uri == transportUri ) {
+					playlistNodes[itemIndex].classList.add("active");				
+				} else {
+					playlistNodes[itemIndex].classList.remove("active");
+				}
+			} 		
+		}		
+	} else {
+		this._currentPlaylistItemUrl = '';
+	}
+	
   }
     
   async play() {
@@ -208,7 +275,8 @@ export class RemoteRenderer {
   _triggerActionError(message) {
   	this._containerElement.dispatchEvent(
       new CustomEvent(RemoteRenderer.EVENT_NAME_ACTIONFAILED, {detail : message})
-  	);	
+  	);
+	return Promise.reject(message);
   }
   
   async _tryExecuteAVTransportCall0(actionName) {
@@ -225,10 +293,72 @@ export class RemoteRenderer {
   	if (this._deviceUdn) {
 		return api.callServiceAction(this._deviceUdn, callOptions).catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));		
 	} else {
-		this._triggerActionError('No connected device');
-		return Promise.reject('No connected device');
+		return this._triggerActionError('No connected device');
 	}
   }  
+  
+  newPlaylist() {
+  	this._playlist = [];
+  	this._playlistContainerElement.innerHTML = '';
+  }
+  
+  addToPlaylist(item, replace) {	
+	if (replace) {
+		this.newPlaylist();
+	}
+	
+	// TODO: Allow double entries in playlist
+	// The only reason that is not allowed at the moment is, that i don't want to deal
+	// with identifying the current track in that case
+	for (const entry of this._playlist) {
+		if (entry.uri == item.uri) {
+			return -1;
+		}
+	}	
+	  
+	const index = this._playlist.push(item) - 1;
+	this._playlistContainerElement.appendChild(createPlaylistLi(item, index));
+	return index;		
+  }
+  
+  findCurrentPlaylistIndex() {
+	//TODO: Using the class as indicator breaks MVC-concept
+	const playlistNodes = this._playlistContainerElement.children;
+	for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
+		if (playlistNodes[itemIndex].classList.contains("active")) {
+			return itemIndex;
+		}			
+	}
+	return -1;
+  }
+  
+  
+  async nextMedia() {
+	if (this._playlist.length > 0) {
+		const currentItemIndex = this.findCurrentPlaylistIndex();
+		let nextItem = currentItemIndex == -1 ? 0 : (currentItemIndex + 1);
+		
+		if (nextItem < this._playlist.length) {
+			return this.setAVTransportItem(this._playlist[nextItem]);
+		}
+	}
+	
+	return this._triggerActionError('No next media in playlist');
+  }
+
+  async previousMedia() {
+	if (this._playlist.length > 0) {
+		const currentItemIndex = this.findCurrentPlaylistIndex();
+		let nextItem = currentItemIndex == -1 ? (this._playlist.length-1) : (currentItemIndex - 1);
+		
+		if (nextItem >= 0) {
+			return this.setAVTransportItem(this._playlist[nextItem]);
+		}
+	}
+
+	return this._triggerActionError('No previous media in playlist');
+  }
+  
 
 }
   

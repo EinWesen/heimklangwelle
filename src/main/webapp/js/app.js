@@ -5,6 +5,7 @@ import { RemoteRenderer } from "./renderer.js";
 const SERVER_SELECT_ID = 'select-server';
 const RENDERER_SELECT_ID = 'select-renderer';
 const REFRESH_DEVICE_BUTTON = 'btn-device-refresh';
+const NEW_PL_BUTTON = 'btn-pl-clear';
 
 const CONTENTBROWSER = new ContentServerBrowser('folder-list');
 const MEDIARENDERER = new RemoteRenderer({
@@ -19,6 +20,9 @@ const MEDIARENDERER = new RemoteRenderer({
 	'time-info' : 'time-info',
 	'transport-title' : 'transport-title',
 	'track-title' : 'track-title',
+	'playlist-container': 'playlist-ul',
+	'btn-next-media' : 'btn-next-media',
+	'btn-prev-media' : 'btn-prev-media',
 });
 
 function showToast(message, duration = 3000) {
@@ -80,14 +84,29 @@ async function init() {
 		showToast(event.detail);
 	});
 	
-	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
+	MEDIARENDERER.addEventListener(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, (event) => {
 		MEDIARENDERER.setAVTransportItem(event.detail).then((apiResult) => {
-			MEDIARENDERER.play();
+			;
 		}).catch((errorInfo) => {
 			// Error is already reporte dinternall
 			console.error(errorInfo);
 			return;
 		});
+	});	
+	
+	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
+		const playlistindex = MEDIARENDERER.addToPlaylist(event.detail, false);
+		if (playlistindex === 0) {
+			MEDIARENDERER.setAVTransportItem(event.detail).then((apiResult) => {
+				;
+			}).catch((errorInfo) => {
+				// Error is already reporte dinternall
+				console.error(errorInfo);
+				return;
+			});
+		} else if (playlistindex === -1) {
+			showToast("Item is already in the playlist");
+		}
 	});	
 	
 	document.getElementById(SERVER_SELECT_ID).onchange = (event) => {
@@ -103,6 +122,7 @@ async function init() {
 		}
 	};	
 	
+	document.getElementById(NEW_PL_BUTTON).onclick = (event) => {MEDIARENDERER.newPlaylist();};
 	document.getElementById(REFRESH_DEVICE_BUTTON).onclick = loadDevices;
 
 	loadDevices();
