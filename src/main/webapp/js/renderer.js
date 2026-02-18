@@ -80,13 +80,13 @@ export class RemoteRenderer {
 	
 	this.selectDevice(undefined, undefined);
 	
-	document.getElementById(options["btn-play"]).onclick = (event) => this.play();
-	document.getElementById(options["btn-pause"]).onclick = (event) => this.pause();
-	document.getElementById(options["btn-stop"]).onclick = (event) => this.stop();
-	document.getElementById(options["btn-next"]).onclick = (event) => this.next();
-	document.getElementById(options["btn-prev"]).onclick = (event) => this.previous();
-	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia();
-	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia();	
+	document.getElementById(options["btn-play"]).onclick = (event) => this.play().catch(errorInfo => errorInfo); // Swallow already reported error;;
+	document.getElementById(options["btn-pause"]).onclick = (event) => this.pause().catch(errorInfo => errorInfo); // Swallow already reported error;;
+	document.getElementById(options["btn-stop"]).onclick = (event) => this.stop().catch(errorInfo => errorInfo); // Swallow already reported error;;
+	document.getElementById(options["btn-next"]).onclick = (event) => this.next().catch(errorInfo => errorInfo); // Swallow already reported error;;
+	document.getElementById(options["btn-prev"]).onclick = (event) => this.previous().catch(errorInfo => errorInfo); // Swallow already reported error;
+	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia().catch(text => text); // Swallow already reported error
+	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia().catch(text => text); // Swallow already reported error;	
 	
 	this._volumeElement.oninput = (event) => {
 	   clearTimeout(this._volDebounceTimer);	
