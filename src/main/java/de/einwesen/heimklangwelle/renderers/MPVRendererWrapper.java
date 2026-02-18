@@ -260,7 +260,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	    		this.firePlayerStateChangedEvent();
 	    		break;
 	    	case PLAYBACK_RESTART:
-	    		this.setPlayerStateAndFire(TransportState.PLAYING);
+	    		// Fires when a track is loaded during pause, but does not start play
+	    		if (this.playerState != TransportState.PAUSED_PLAYBACK) {
+	    			this.setPlayerStateAndFire(TransportState.PLAYING);	    			
+	    		}
 	    		break;
 			case END_FILE:
 				this.currentTrackTimePos = 0;
