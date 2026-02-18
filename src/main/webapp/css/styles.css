@@ -63,13 +63,26 @@ h1 {
     background: #fafafa;
 }
 
+
 .item-list li.active {
-    background: #A0C4FF;
+	border-color: #687FA5;
 }
+
+.item-list li.selected {
+	background: #A0C4FF;
+}
+
 
 .item-list li:hover, .item-list li.active:hover {
     background: #e6f0ff;
     border-color: #a0c4ff;
+}
+
+#playlist-ul.item-list li {
+  	justify-content: space-between; /* Verteilt Spans an die Ränder */     
+}
+#playlist-ul.item-list li span:nth-child(2) {
+	flex: 1;	
 }
 
 .toast {

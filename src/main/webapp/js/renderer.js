@@ -27,29 +27,35 @@ function tryParseTitleFromDidl(metaData) {
 
 function createPlaylistLi(item, index) {
 	const li = document.createElement("li");
-	li.textContent = item.title;
+	const span1 = li.appendChild(document.createElement('span'));
+	const span2 = li.appendChild(document.createElement('span'));
+	const span3 = li.appendChild(document.createElement('span'));
+	
+	let fileicon = '📄';
+
+	// Add type-specific class
+	if (item.mimeType?.startsWith("audio")) {
+	    fileicon = '🎵';
+	} else if (item.mimeType?.startsWith("video")) {
+	    fileicon = '🎬';
+	} 	
+	
+	span1.textContent = fileicon;
+	span2.classList.add('title');
+	span2.textContent = item.title;
+	span3.classList.add('remove');
+	span3.innerHTML = '&#9167;';
 	
 	li.draggable = true;
 	li.dataset.itemindex = index;
 
-/*	li.addEventListener("dragstart", e => {
-	    draggedIndex = Number(e.target.dataset.index);
-	});
-
-	li.addEventListener("dragover", e => e.preventDefault());
-
-	li.addEventListener("drop", e => {
-	    e.preventDefault();
-	    const targetIndex = Number(e.target.dataset.index);
-	    reorder(draggedIndex, targetIndex);
-	});
-*/		
 	return li;
 }
 
 export class RemoteRenderer { 
   static EVENT_NAME_ACTIONFAILED = 'actionFailed';
   static EVENT_NAME_PLAYLIST_DBLCLICK = 'PlaylistDblClick';
+  static EVENT_NAME_PLAYLIST_REMOVE = 'PlaylistRemoveItem';
   
   constructor(options) {
 	this._deviceUdn = undefined;
@@ -88,13 +94,48 @@ export class RemoteRenderer {
 	      this.setVolume(event.target.value);
 	   }, 500); // adjust delay as needed
 	};
-	
+
 	this._playlistContainerElement.addEventListener("dblclick", (event) => {
-	   const li = event.target.closest("li");
-	   this._containerElement.dispatchEvent(
-	   		new CustomEvent(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, {detail : this._playlist[li.dataset.itemindex]})
-	   );		   
+		const li = event.target.closest("li");
+		if (li != null) {
+			const span = event.target.closest('span.remove');
+			if (span != null) {
+				this._removePlaylistListItem(li);
+			} else {
+		   	   this._containerElement.dispatchEvent(
+			   		new CustomEvent(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, {detail : this._playlist[li.dataset.itemindex]})
+			   );		   					
+			}			
+		}
 	});
+	
+	let draggedIndex = undefined;
+	this._playlistContainerElement.addEventListener("dragstart", (event) => {
+		event.dataTransfer.setData('text/plain', event.target.closest("li").dataset.itemindex);
+		event.dataTransfer.effectAllowed = 'move';
+	});
+
+	this._playlistContainerElement.addEventListener("dragover", (event) => {
+		const li = event.target.closest("li");
+		if (li != null) {
+			event.dataTransfer.dropEffect = 'move';			
+		}
+		event.preventDefault()
+	});
+
+	this._playlistContainerElement.addEventListener("drop", (event) => {
+		const li = event.target.closest("li");
+		if (li != null) {
+			event.preventDefault();
+			
+			const from = parseInt(event.dataTransfer.getData('text/plain')); 
+			const to = li.dataset.itemindex;
+			
+			this._movePlaylistItem(from, to);
+		   
+		}
+	});
+	
 	
   }
   
@@ -321,6 +362,35 @@ export class RemoteRenderer {
 	return index;		
   }
   
+  _removePlaylistListItem(htmlLi) {
+	// TODO: Allow removing active item
+  	// The only reason that is not allowed at the moment is, that i don't want to deal
+  	// with the implications on the remote renderer (in the future ;) )
+	
+  	if (!htmlLi.classList.contains('active')) {
+		
+		this._playlistContainerElement.removeChild(htmlLi);
+  		return Promise.resolve(this._playlist.splice(htmlLi.dataset.itemindex, 1)[0]);
+	} else {
+		return this._triggerActionError('The currently active media can not be removed from the list');
+	}
+  }  
+  
+  _movePlaylistItem(from,to) {
+	// Move html node
+	const movedNode = this._playlistContainerElement.children[from];
+	 this._playlistContainerElement.insertBefore(movedNode, this._playlistContainerElement.children[to]);
+
+	// Move in internal playlist as well
+	if (from !== to) {
+		if (from < to) {
+			to--;
+		}
+		const movedItem = this._playlist.splice(from, 1)[0];
+		this._playlist.splice(to, 0, movedItem);					
+	}	
+  }
+  
   findCurrentPlaylistIndex() {
 	//TODO: Using the class as indicator breaks MVC-concept
 	const playlistNodes = this._playlistContainerElement.children;
@@ -330,8 +400,7 @@ export class RemoteRenderer {
 		}			
 	}
 	return -1;
-  }
-  
+  }  
   
   async nextMedia() {
 	if (this._playlist.length > 0) {
@@ -358,7 +427,6 @@ export class RemoteRenderer {
 
 	return this._triggerActionError('No previous media in playlist');
   }
-  
 
 }
   
