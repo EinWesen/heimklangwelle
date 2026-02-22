@@ -66,7 +66,8 @@ export class RemoteRenderer {
 	
 	this._volDebounceTimer = undefined;
 	this._stateDebounceTimer = undefined;
-	this._currentPlaylistItemUrl = ''; 
+	this._currentPlaylistItemUrl = '';
+	this._userstop = false; 
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
@@ -142,6 +143,7 @@ export class RemoteRenderer {
   async selectDevice(udn, instanceId) {
     this._deviceUdn = udn;
 	this._instanceId = instanceId;
+	this._userstop = false; 
 	
 	if (this._eventSource) {
 		this._eventSource.close();		
@@ -164,8 +166,24 @@ export class RemoteRenderer {
 	
 	if (this._deviceUdn) {
 		this._eventSource = api.createRendererEventSubcription(udn, '0', (event) => {
+			
+			// if we are stopped && were not stopped before
+			if (event.type == 'TransportState' && event.data == 'STOPPED' && this._properties[event.type] != event.data) {
+				
+				// if the user did not ask for stop
+				if (this._userstop === false) {
+					if (this._playlist.length > 0 && this.findCurrentPlaylistIndex() != (this._playlist.length - 1)) {
+						this.nextMedia().catch((errorInfo) => console.log("Unexpected fail of next()", errorInfo));
+					}				
+				} else {
+					// reset
+					this._userstop = false;
+				}
+				
+			}			
+			
 			this._properties[event.type] = event.data;
-
+			
 			clearTimeout(this._stateDebounceTimer);	
 			this._stateDebounceTimer = setTimeout(() => {
 			   this._remotePropertyChanged();			
@@ -349,6 +367,7 @@ export class RemoteRenderer {
   newPlaylist() {
   	this._playlist = [];
   	this._playlistContainerElement.innerHTML = '';
+	this._currentPlaylistItemUrl = '';	
   }
   
   addToPlaylist(item, replace) {	
