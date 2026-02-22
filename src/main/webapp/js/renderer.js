@@ -377,18 +377,30 @@ export class RemoteRenderer {
   }  
   
   _movePlaylistItem(from,to) {
-	// Move html node
-	const movedNode = this._playlistContainerElement.children[from];
-	 this._playlistContainerElement.insertBefore(movedNode, this._playlistContainerElement.children[to]);
-
-	// Move in internal playlist as well
-	if (from !== to) {
-		if (from < to) {
-			to--;
-		}
-		const movedItem = this._playlist.splice(from, 1)[0];
-		this._playlist.splice(to, 0, movedItem);					
-	}	
+	  if (from !== to) {
+	  	
+	  	// Move html node
+	  	const movedNode = this._playlistContainerElement.children[from];
+	
+	  	if (from > to) {
+	  		this._playlistContainerElement.children[to].before(movedNode);
+	  	} else {
+	  		this._playlistContainerElement.children[to].after(movedNode);
+	  	} 
+	
+	  	// Update indices on html element
+	  	const changeStart = Math.min(from, to);
+	  	const changeEnd = Math.max(from, to);
+	
+	  	for (let i=changeStart;i<=changeEnd;i++) {
+	  		this._playlistContainerElement.children[i].dataset.itemindex = i;
+	  	}	
+	  	
+	  	// Move in internal playlist as well
+	  	const movedItem = this._playlist.splice(from, 1)[0];
+	  	this._playlist.splice(to, 0, movedItem);					
+	  }
+  	
   }
   
   findCurrentPlaylistIndex() {
