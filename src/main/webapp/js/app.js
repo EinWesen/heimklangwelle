@@ -78,16 +78,13 @@ async function loadDevices() {
 }
 
 
-
 async function init() {	
 	MEDIARENDERER.addEventListener(RemoteRenderer.EVENT_NAME_ACTIONFAILED, (event) => {
 		showToast(event.detail);
 	});
 	
 	MEDIARENDERER.addEventListener(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, (event) => {
-		MEDIARENDERER.setAVTransportItem(event.detail).then((apiResult) => {
-			;
-		}).catch((errorInfo) => {
+		MEDIARENDERER.playAVTransportItem(event.detail).catch((errorInfo) => {
 			// Error is already reporte dinternall
 			console.error(errorInfo);
 			return;
@@ -96,10 +93,8 @@ async function init() {
 	
 	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
 		const playlistindex = MEDIARENDERER.addToPlaylist(event.detail.item, event.detail.play);
-		if (playlistindex === 0) {
-			MEDIARENDERER.setAVTransportItem(event.detail.item).then((apiResult) => {
-				;
-			}).catch((errorInfo) => {
+		if (playlistindex === 0 && !MEDIARENDERER.isPlaying()) {
+			MEDIARENDERER.playAVTransportItem(event.detail.item).catch((errorInfo) => {
 				// Error is already reported internally
 				console.error(errorInfo);
 				return;
@@ -129,4 +124,3 @@ async function init() {
 }
 
 init();
-

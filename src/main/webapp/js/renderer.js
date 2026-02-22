@@ -85,7 +85,7 @@ export class RemoteRenderer {
 	document.getElementById(options["btn-stop"]).onclick = (event) => this.stop().catch(errorInfo => errorInfo); // Swallow already reported error;;
 	document.getElementById(options["btn-next"]).onclick = (event) => this.next().catch(errorInfo => errorInfo); // Swallow already reported error;;
 	document.getElementById(options["btn-prev"]).onclick = (event) => this.previous().catch(errorInfo => errorInfo); // Swallow already reported error;
-	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia().catch(text => text); // Swallow already reported error
+	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia().catch(text => console.log("error", text)); // Swallow already reported error
 	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia().catch(text => text); // Swallow already reported error;	
 	
 	this._volumeElement.oninput = (event) => {
@@ -428,7 +428,11 @@ export class RemoteRenderer {
 		let nextItem = currentItemIndex == -1 ? 0 : (currentItemIndex + 1);
 		
 		if (nextItem < this._playlist.length) {
-			return this.setAVTransportItem(this._playlist[nextItem]);
+			if (this.isPlaying()) {
+				return this.playAVTransportItem(this._playlist[nextItem]);				
+			} else {
+				return this.setAVTransportItem(this._playlist[nextItem]);
+			}
 		}
 	}
 	
@@ -441,11 +445,25 @@ export class RemoteRenderer {
 		let nextItem = currentItemIndex == -1 ? (this._playlist.length-1) : (currentItemIndex - 1);
 		
 		if (nextItem >= 0) {
-			return this.setAVTransportItem(this._playlist[nextItem]);
+			if (this.isPlaying()) {
+				return this.playAVTransportItem(this._playlist[nextItem]);				
+			} else {
+				return this.setAVTransportItem(this._playlist[nextItem]);
+			}
 		}
 	}
 
 	return this._triggerActionError('No previous media in playlist');
+  }
+  
+  async playAVTransportItem(item) {
+	return this.setAVTransportItem(item).then((apiResult) => {
+		return this.play();	
+	});	
+  } 
+  
+  isPlaying() {
+	return 	this._properties['TransportState'] == 'PLAYING';
   }
 
 }

@@ -14,7 +14,6 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	
 	private volatile boolean isMute = false;
 	private volatile long volume = 100;
-    private volatile long currentTrack = 0;
     private volatile long playlistSize = 0;	
 
 	public DummyWrapperImpl() {
@@ -49,7 +48,7 @@ public class DummyWrapperImpl extends AbstractRendererWrapper {
 	}
 
 	@Override
-	public void loadCurrentContent() throws AVTransportException {
+	public void loadCurrentContentMetaData() throws AVTransportException {
 		String u = this.getCurrentTransportURI();
 		if (u.toLowerCase().endsWith(".m3u")) {
 			this.playlistSize = 2;

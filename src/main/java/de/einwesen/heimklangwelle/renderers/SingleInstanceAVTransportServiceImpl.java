@@ -71,22 +71,47 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	@Override
 	public void stop(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
-		this.backendInstance.stop();
+		switch(this.backendInstance.getPlayState()) {
+			case PLAYING:
+				this.backendInstance.stop();
+				break;
+			case STOPPED:
+				break; // ignore
+			default:
+				throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
+		}
 	}
 
 	@Override
 	public void play(UnsignedIntegerFourBytes instanceId, String speed) throws AVTransportException {
 		validateInstanceId(instanceId);
-		if (!"1".equals(speed)) {
-			throw new AVTransportException(717, "Play speed not supported");			
+		switch(this.backendInstance.getPlayState()) {
+			case STOPPED:
+				if (!"1".equals(speed)) {
+					throw new AVTransportException(717, "Play speed not supported");			
+				}
+				this.backendInstance.play();
+				break;
+			case PLAYING:
+				break; // ignore
+			default:
+				throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
 		}
-		this.backendInstance.play();
+		
 	}
 
 	@Override
 	public void pause(UnsignedIntegerFourBytes instanceId) throws AVTransportException {
 		validateInstanceId(instanceId);
-		this.backendInstance.pause();
+		switch(this.backendInstance.getPlayState()) {
+			case PLAYING:
+				this.backendInstance.pause();
+				break;
+			case PAUSED_PLAYBACK:
+				break; // ignore
+		default:
+			throw new AVTransportException(AVTransportErrorCode.TRANSITION_NOT_AVAILABLE);
+		}		
 	}
 
 	@Override

@@ -97,9 +97,9 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     private IpcChannelBridge ipc;
     private Thread ipcConsumer;
 
+    private volatile boolean isPaused = false;
     private volatile long volume = 100;  
     private volatile long preMuteVolume = -1;
-    private volatile long currentTrack = 0;
     private volatile long currentTrackTimePos = 0;       
     private volatile long playlistSize = 0;
     private volatile List<String> currentPlaylistMetaData = Collections.synchronizedList(new ArrayList<>());
@@ -269,17 +269,16 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 				this.currentTrackTimePos = 0;
 				
 				// If paused and a new track is loaded, this triggers a stop, but the player staýs paused
-				if (this.playerState != TransportState.PAUSED_PLAYBACK) {
-					this.setPlayerStateAndFire(TransportState.STOPPED);					
+				if (this.playlistSize > 1 &&  this.currentTrack < this.playlistSize) {
+					this.setPlayerStateAndFire(TransportState.TRANSITIONING);					
+				} else {
+					this.setPlayerStateAndFire(TransportState.STOPPED);										
 				}
 				
 				break;			
 			case IDLE:
 				if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
 					this.currentTrack = 0;
-					this.currentTransportURI = "";
-					this.currentTransportURIMetaData = "";
-					this.playlistSize = 0;
 					this.playerState = TransportState.STOPPED;
 					this.firePlayerStateChangedEvent();					
 				}
@@ -294,12 +293,12 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 						}
 						break;
 					case PAUSE:
+						this.isPaused = event.getBoolean("data");
 						// MPV send pause off at the start for some reason, even without media
 						if (this.playerState != TransportState.NO_MEDIA_PRESENT) {							
-							if (event.getBoolean("data")) {
+							if (this.isPaused) {
 								this.setPlayerStateAndFire(TransportState.PAUSED_PLAYBACK);						
 							} else {
-								// i guess?
 								this.setPlayerStateAndFire(TransportState.PLAYING);
 							}							
 						}
@@ -418,22 +417,28 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         super.shutdown();
     }
         
-   
-	@Override
-	public void loadCurrentContent() throws AVTransportException {
-		this.currentPlaylistMetaData.clear();
-		this.currentTrackTimePos = 0;
-		
-		final String u = getCurrentTransportURI();
-		LOGGER.debug(u);
+    @Override
+    public void loadCurrentContentMetaData() {
+    	this.currentPlaylistMetaData.clear();
+    	this.currentTrackTimePos = 0;
+    	
+    	final String u = getCurrentTransportURI();
+    	LOGGER.debug(u);
 
-		//FIXME: State if broken if this fails
 		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
 			this.currentPlaylistMetaData.addAll(parseSubTrackMetaData(u));
 			this.playlistSize = this.currentPlaylistMetaData.size();
+		} else {
+			this.playlistSize = 1;				
+		}
+    }
+	
+    public void loadCurrentContent() throws AVTransportException {
+
+    	final String u = getCurrentTransportURI();
+		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
 			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
 		} else {
-			this.playlistSize = 1;	
 			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
 		}
 		
@@ -496,7 +501,17 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	
 	@Override
 	public void play() throws AVTransportException {
-		sendCommandElseThrowTransportException(new Object[]{CMD_SET_PROPERTY, "pause", Boolean.FALSE});
+    	final String u = getCurrentTransportURI();
+		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
+			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+		} else {
+			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+		}
+		
+		if (this.isPaused) {
+			sendCommandElseThrowTransportException(new Object[]{CMD_SET_PROPERTY, "pause", Boolean.FALSE});			
+		}
+
 	}
 
 	@Override

@@ -43,6 +43,7 @@ public abstract class AbstractRendererWrapper {
 	protected volatile String currentTransportURIMetaData = "";
 	protected volatile String currentTrackURI = ""; 
 	protected volatile String currentTrackURIMetaData = "";
+    protected volatile long currentTrack = 0;
 	
 	protected volatile boolean ready = false;
 	
@@ -78,6 +79,7 @@ public abstract class AbstractRendererWrapper {
 	}
 	
     protected void setPlayerStateAndFire(TransportState state) {
+    	System.out.println("fire!:" + state);
     	if (this.playerState != state) {    		
     		LOGGER.trace("fire!:" + state);
     		this.playerState = state;
@@ -161,20 +163,35 @@ public abstract class AbstractRendererWrapper {
 	}	
 	
 	public void setCurrentContent(String currentURI, String currentURIMetaData) throws AVTransportException {
-		if (currentURI != null) {
-			this.currentTransportURI = currentURI;			
-		} else {
-			this.currentTransportURI = "";
+		if (this.playerState == TransportState.PLAYING) {
+			this.stop();
 		}
 		
-		
+		this.currentTrackURI = "";
+		this.currentTrackURIMetaData = "";
+
 		if (currentURIMetaData != null) {
 			this.currentTransportURIMetaData = currentURIMetaData;			
 		} else {
 			this.currentTransportURIMetaData = "";
 		}
 		
-		this.loadCurrentContent();
+		if (currentURI != null) {
+			this.currentTransportURI = currentURI;
+			this.currentTrack = 1;
+			
+			// State is wrong if this fails
+			this.loadCurrentContentMetaData();
+			setPlayerStateAndFire(TransportState.STOPPED);
+		} else {
+			this.currentTransportURI = "";
+		}		
+		
+		
+		if ("".equals(this.currentTransportURI)) {
+			setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);
+		}
+		
 	}
 
 	public String getCurrentTransportURI() {
@@ -308,12 +325,12 @@ public abstract class AbstractRendererWrapper {
 		return result;		
 	}
 	
+	public abstract void loadCurrentContentMetaData() throws AVTransportException;
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;
 	public abstract void setMute(Channel channel, boolean desiredMute)  throws RenderingControlException;
 	public abstract void setVolume(Channel channel, long desiredVolume) throws RenderingControlException;
 	public abstract long getVolume(Channel channel) throws RenderingControlException;
 
-	public abstract void loadCurrentContent() throws AVTransportException;
 	public abstract void nextTrack() throws AVTransportException;
 	public abstract void previousTrack() throws AVTransportException;
 	public abstract void play() throws AVTransportException;
