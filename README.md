@@ -23,7 +23,7 @@ Is this best way to solve that problem? - Of course not! There are so many easie
 - [x] Controlpoint
     - [x] Implement backend to handle UPNP-communication with mediaservers
     - [x] Implement WebPlayer UI
-    - [ ] Implement autoplay for playlist
+    - [x] Implement autoplay for playlist
 - [x] Mediaserver
     - [x] Implement mediaserver service infrastruture
     - [x] Implement the actual contentlisting (on disk) and serving
