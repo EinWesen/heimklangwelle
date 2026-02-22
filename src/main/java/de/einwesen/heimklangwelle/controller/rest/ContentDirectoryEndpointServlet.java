@@ -94,7 +94,7 @@ public class ContentDirectoryEndpointServlet extends HttpServlet {
 				jsonChild.put("title", item.getTitle());
 				
 				if (item.getResources().size() == 1) {					
-					final Res res = item.getResources().getFirst();
+					final Res res = item.getResources().get(0);
 					jsonChild.put("uri", res.getValue());
 					jsonChild.put("mimeType", res.getProtocolInfo().getContentFormatMimeType().getType());
 					
