@@ -98,6 +98,7 @@ h1 {
     transition: background 0.2s;
     border: 1px solid transparent;
     margin-right: 8px;
+	overflow-wrap: anywhere;
 }
 
 .item-list li:nth-child(even) {
