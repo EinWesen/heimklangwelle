@@ -181,65 +181,73 @@ export class RemoteRenderer {
   }  
   
   _remotePropertyChanged() {	
-	this._timeElement.textContent = this._properties['RelativeTimePosition'];
-	this._stateElement.textContent = this._properties['TransportState'];
-	this._volumeElement.value = this._properties['Volume'];
+	  this._timeElement.textContent = this._properties['RelativeTimePosition'];
+	  this._stateElement.textContent = this._properties['TransportState'];
+	  this._volumeElement.value = this._properties['Volume'];
 	
-	// Update tranport title display
-	let transportTitle = undefined;
+	  const transportUri = this._properties['AVTransportURI'];
 	
-	if (this._properties['AVTransportURI'] != '' && this._properties['AVTransportURIMetaData'] != '' && this._properties['AVTransportURIMetaData'] != 'NOT_IMPLEMENTED') {
-		transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
-	}
-	if (!transportTitle) {
-		transportTitle = this._properties['AVTransportURI'];		
-	}
-	this._titleElement.textContent = transportTitle;
+	  // Update tranport title display
+	  let transportTitle = undefined;
+	
+	  if (transportUri != '' && this._properties['AVTransportURIMetaData'] != '' && this._properties['AVTransportURIMetaData'] != 'NOT_IMPLEMENTED') {
+	  	transportTitle = tryParseTitleFromDidl(this._properties['AVTransportURIMetaData']);
+	  }
+	  if (!transportTitle) {
+	  	transportTitle = transportUri;		
+	  }
+	  this._titleElement.textContent = transportTitle;
 	
 	
 	
-	// Update track title display
-	let trackTitle = undefined;	
+	  // Update track title display
+	  let trackTitle = undefined;	
 	
-	if (this._properties['CurrentTrackURI'] != this._properties['AVTransportURI']) {
-		if (this._properties['CurrentTrackURI'] != '' && this._properties['CurrentTrackMetaData'] != '' && this._properties['CurrentTrackMetaData'] != 'NOT_IMPLEMENTED') {
-			trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
-		}
-		if (!trackTitle) {
-			trackTitle = this._properties['CurrentTrackURI'];	
-		} else {
-			trackTitle = ' | ' + trackTitle;
-		}
-	} else {
-		trackTitle = '';
-	}
+	  if (this._properties['CurrentTrackURI'] != transportUri && this._properties['CurrentTrackURI'] != '') {
+	  	if (this._properties['CurrentTrackMetaData'] != '' && this._properties['CurrentTrackMetaData'] != 'NOT_IMPLEMENTED') {
+	  		trackTitle = tryParseTitleFromDidl(this._properties['CurrentTrackMetaData']);
+	  	}
+	  	if (!trackTitle) {
+	  		trackTitle = ' | ' + this._properties['CurrentTrackURI'];	
+	  	} else {
+	  		trackTitle = ' | ' + trackTitle;
+	  	}
+	  } else {
+	  	trackTitle = '';
+	  }
+	
+	  if (this._properties['NumberOfTracks'] != '' && (parseInt(this._properties['NumberOfTracks'])>1)) {
+	  	trackTitle = trackTitle.concat(
+	      	' | [',
+	  		(this._properties['CurrentTrack'] != '' ?  this._properties['CurrentTrack'] : '?'),
+	  		'/',
+	  		this._properties['NumberOfTracks'],
+	  		']'
+	  	);		
+	  }	
+	
+	  this._trackTitleElement.textContent = trackTitle;
+	
+	
+	  // Mark current track in playlist, if possible		
+	  if (this._playlist && this._playlist.length > 0) {
+	  	
+		if (transportUri != this._currentPlaylistItemUrl) {
+	  		this._currentPlaylistItemUrl = transportUri;		
+	  		const playlistNodes = this._playlistContainerElement.children;
+	  		for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
+	  			if (this._playlist[itemIndex].uri == transportUri ) {
+	  				playlistNodes[itemIndex].classList.add("active");				
+	  			} else {
+	  				playlistNodes[itemIndex].classList.remove("active");
+	  			}
+	  		} 		
+	  	}	
+			
+	  } else {
+	  	this._currentPlaylistItemUrl = '';
+	  }
 
-	this._trackTitleElement.textContent = trackTitle;
-	
-	
-	// Mark current track in playlist, if possible
-	const transportUri = this._properties['CurrentTrackURI'];
-	let trackUri = this._properties['CurrentTrackURI'];
-	if (trackUri == '') {
-		trackUri = transportUri;		
-	}
-	
-	if (this._playlist && this._playlist.length > 0) {
-		if (trackUri != this._currentPlaylistItemUrl) {
-			this._currentPlaylistItemUrl = trackUri;		
-			const playlistNodes = this._playlistContainerElement.children;
-			for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
-				if (this._playlist[itemIndex].uri == trackUri || this._playlist[itemIndex].uri == transportUri ) {
-					playlistNodes[itemIndex].classList.add("active");				
-				} else {
-					playlistNodes[itemIndex].classList.remove("active");
-				}
-			} 		
-		}		
-	} else {
-		this._currentPlaylistItemUrl = '';
-	}
-	
   }
     
   async play() {
