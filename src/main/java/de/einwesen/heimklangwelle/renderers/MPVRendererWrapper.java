@@ -267,7 +267,12 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	    		break;
 			case END_FILE:
 				this.currentTrackTimePos = 0;
-				this.setPlayerStateAndFire(TransportState.STOPPED);
+				
+				// If paused and a new track is loaded, this triggers a stop, but the player staýs paused
+				if (this.playerState != TransportState.PAUSED_PLAYBACK) {
+					this.setPlayerStateAndFire(TransportState.STOPPED);					
+				}
+				
 				break;			
 			case IDLE:
 				if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
