@@ -6,6 +6,7 @@ const SERVER_SELECT_ID = 'select-server';
 const RENDERER_SELECT_ID = 'select-renderer';
 const REFRESH_DEVICE_BUTTON = 'btn-device-refresh';
 const NEW_PL_BUTTON = 'btn-pl-clear';
+const ADD_URI_TO_PL_BUTTON = 'btn-pl-add';
 
 const CONTENTBROWSER = new ContentServerBrowser('folder-list');
 const MEDIARENDERER = new RemoteRenderer({
@@ -116,6 +117,21 @@ async function init() {
 			MEDIARENDERER.selectDevice(event.target.value, "0");
 		}
 	};	
+	
+	document.getElementById(ADD_URI_TO_PL_BUTTON).onclick = (event) => {
+		const uri = prompt("Please enter uri", "").trim();
+		if (uri != '') { 
+			MEDIARENDERER.addToPlaylist({
+				id: "-1_" + performance.now(),
+				isContainer: false,
+				mimeType: "audio",
+				parentId: "-1",
+				title: uri,
+				uri: uri,
+				uriMetaData: ""
+			}, false);
+		}		
+	};
 	
 	document.getElementById(NEW_PL_BUTTON).onclick = (event) => {MEDIARENDERER.newPlaylist();};
 	document.getElementById(REFRESH_DEVICE_BUTTON).onclick = loadDevices;
