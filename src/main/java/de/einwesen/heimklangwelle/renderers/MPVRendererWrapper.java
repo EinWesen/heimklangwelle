@@ -501,17 +501,18 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	
 	@Override
 	public void play() throws AVTransportException {
-    	final String u = getCurrentTransportURI();
-		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
-			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-		} else {
-			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-		}
+    	if (this.playerState != TransportState.PAUSED_PLAYBACK) {
+    		final String u = getCurrentTransportURI();
+    		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
+    			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+    		} else {
+    			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+    		}    		
+    	}
 		
 		if (this.isPaused) {
 			sendCommandElseThrowTransportException(new Object[]{CMD_SET_PROPERTY, "pause", Boolean.FALSE});			
 		}
-
 	}
 
 	@Override

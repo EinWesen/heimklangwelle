@@ -87,6 +87,7 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 		validateInstanceId(instanceId);
 		switch(this.backendInstance.getPlayState()) {
 			case STOPPED:
+			case PAUSED_PLAYBACK:
 				if (!"1".equals(speed)) {
 					throw new AVTransportException(717, "Play speed not supported");			
 				}
