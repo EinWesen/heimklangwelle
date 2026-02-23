@@ -5,13 +5,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.json.JSONObject;
 import org.jupnp.model.gena.CancelReason;
 import org.jupnp.model.gena.GENASubscription;
 import org.jupnp.model.message.UpnpResponse;
 import org.jupnp.model.meta.Service;
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
 import org.jupnp.support.avtransport.lastchange.AVTransportLastChangeParser;
+import org.jupnp.support.lastchange.Event;
 import org.jupnp.support.lastchange.EventedValue;
+import org.jupnp.support.lastchange.InstanceID;
 import org.jupnp.support.lastchange.LastChangeParser;
 import org.jupnp.support.model.Channel;
 import org.jupnp.support.model.TransportState;
@@ -22,18 +25,6 @@ import org.jupnp.support.renderingcontrol.lastchange.RenderingControlLastChangeP
 import de.einwesen.heimklangwelle.upnpsupport.LastChangeAwareSubscriptionCallback;
 
 public abstract class RendererSubscriptionPublisherCallback extends LastChangeAwareSubscriptionCallback {
-	public static final String[] SUPPORTED_PROPERTIES = {
-			"AVTransportURIMetaData",
-			"CurrentTrackMetaData",
-			"RelativeTimePosition",
-			"AVTransportURI",
-			"CurrentTrackURI",
-			"CurrentTrack",
-			"NumberOfTracks",
-			"TransportState",
-			"Volume",	
-			"Mute"		
-	};
 	
 	public static final int SUBSCRIPTION_AVTRANSPORT = 1;
 	public static final int SUBSCRIPTION_RENDERINGCONTROL = 2;
@@ -61,10 +52,8 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 				return null;
 		}
 	}
-
-	@SuppressWarnings("rawtypes")
-	@Override
-	protected void eventedValueReceived(GENASubscription subscription, EventedValue<?> eventedValue) {
+	
+	protected String getEventedValueString(EventedValue<?> eventedValue) {
 		final String value;
 		
 		switch (eventedValue.getName()) {
@@ -124,12 +113,32 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 				break;			
 		}		
 		
-		if (value != null) {			
-			if (!value.equals(lastStates.get(eventedValue.getName()))) {				
-				publish(subscription, eventedValue.getName(), value);
-				this.lastStates.put(eventedValue.getName(), value);
+		
+		return value;					
+	}
+
+	@Override
+	protected void eventReceived(@SuppressWarnings("rawtypes") GENASubscription subscription, Event lastChangeEvent) {
+		for (InstanceID id : lastChangeEvent.getInstanceIDs()) {
+			// This will not be correct if there ever is instance != 0, becaus ewe have no way of differentiating
+			
+			final JSONObject jsonEventedValues = new JSONObject();
+			
+			for (EventedValue<?> eventedValue :id.getValues()) {				
+				final String value = getEventedValueString(eventedValue);
+				if (value != null) {			
+					if (!value.equals(lastStates.get(eventedValue.getName()))) {				
+						this.lastStates.put(eventedValue.getName(), value);
+						jsonEventedValues.put(eventedValue.getName(), value);
+					}
+				}			
+			}
+			
+			if (!jsonEventedValues.isEmpty()) {
+				publish(subscription, jsonEventedValues);				
 			}
 		}		
+		
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -178,6 +187,6 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	@SuppressWarnings("rawtypes")
 	protected abstract void stopped(GENASubscription subscription);
 	@SuppressWarnings("rawtypes")
-	protected abstract void publish(GENASubscription subscription, String propertyName, String propertyValueString);
+	protected abstract void publish(GENASubscription subscription, JSONObject lastChangeEvent);
 
 }

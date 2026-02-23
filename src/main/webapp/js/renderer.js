@@ -167,29 +167,49 @@ export class RemoteRenderer {
 	if (this._deviceUdn) {
 		this._eventSource = api.createRendererEventSubcription(udn, '0', (event) => {
 			
-			// if we are stopped && were not stopped before
-			if (event.type == 'TransportState' && event.data == 'STOPPED' && this._properties[event.type] != event.data) {
+			if (event.type == 'LastChange') {
 				
-				// if the user did not ask for stop
-				if (this._userstop === false) {
-					if (this._playlist.length > 0 && this.findCurrentPlaylistIndex() != (this._playlist.length - 1)) {
-						this.nextMedia().catch((errorInfo) => console.log("Unexpected fail of next()", errorInfo));
-					}				
-				} else {
-					// reset
-					this._userstop = false;
-				}
+				const eventData = (() => {
+				    try {
+				        return JSON.parse(event.data);
+				    } catch (je) {
+				        console.error(je);
+				        return undefined;
+				    }
+				})();
 				
-			}			
-			
-			this._properties[event.type] = event.data;
-			
+				if (eventData != undefined) {
+					
+					// if we are stopped && were not stopped before
+					if (eventData['TransportState'] == 'STOPPED' && this._properties['TransportState'] != 'STOPPED') {
+						
+						// if the user did not ask for stop
+						if (this._userstop === false) {
+							if (this._playlist.length > 0 && this.findCurrentPlaylistIndex() != (this._playlist.length - 1)) {
+								this.nextMedia().catch((errorInfo) => console.log("Unexpected fail of next()", errorInfo));
+							}				
+						} else {
+							// reset
+							this._userstop = false;
+						}
+						
+					}			
+					
+					Object.assign(this._properties, eventData);
+					
+					
+				}				
+				
+			} else if (event.type == 'RelativeTimePosition') {
+				this._properties[event.type] = event.data;
+			}
+						
 			clearTimeout(this._stateDebounceTimer);	
 			this._stateDebounceTimer = setTimeout(() => {
-			   this._remotePropertyChanged();			
+				this._remotePropertyChanged();			
 			}, 500); // adjust delay as needed
-						
-		});		
+			
+		});
 	    this._eventSource.onerror = (err) => {	        
 	        this._eventSource.close();
 			this._triggerActionError("Disconnected from remote event source").catch((ignore) => 'ERROR already reported');

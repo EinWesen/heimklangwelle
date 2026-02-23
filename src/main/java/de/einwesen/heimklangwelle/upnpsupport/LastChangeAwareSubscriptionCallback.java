@@ -9,8 +9,6 @@ import org.jupnp.model.message.UpnpResponse;
 import org.jupnp.model.meta.Service;
 import org.jupnp.model.state.StateVariableValue;
 import org.jupnp.support.lastchange.Event;
-import org.jupnp.support.lastchange.EventedValue;
-import org.jupnp.support.lastchange.InstanceID;
 import org.jupnp.support.lastchange.LastChangeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,13 +62,7 @@ public abstract class LastChangeAwareSubscriptionCallback extends SubscriptionCa
         });
     }
 
-	protected void eventReceived(@SuppressWarnings("rawtypes") GENASubscription subscription, Event lastChangeEvent) {		
-		for (InstanceID id : lastChangeEvent.getInstanceIDs()) {						
-			for (EventedValue<?> ev :id.getValues()) {
-				eventedValueReceived(subscription, ev);
-			}
-		}						
-	}
+	protected abstract void eventReceived(@SuppressWarnings("rawtypes") GENASubscription subscription, Event lastChangeEvent);		
 	
 	protected void eventedValueReceived(@SuppressWarnings("rawtypes") GENASubscription subscription, StateVariableValue<?> eventedValue) {
 		LOGGER.warn("Subscription to " + service.getServiceType() + "recieved unexpected value ("+subscription.getSubscriptionId()+"): " + eventedValue.getStateVariable().getName());
@@ -78,6 +70,4 @@ public abstract class LastChangeAwareSubscriptionCallback extends SubscriptionCa
 	protected void failedParse(@SuppressWarnings("rawtypes") GENASubscription subscription, StateVariableValue<?> eventedValue, Exception e) {
 		LOGGER.error("Subscription to " + service.getServiceType() + " failed at parsing ("+subscription.getSubscriptionId()+"): " + eventedValue.getStateVariable().getName(), e);
 	}	
-
-	protected abstract void eventedValueReceived(@SuppressWarnings("rawtypes")GENASubscription subscription, EventedValue<?> eventedValue);
 }

@@ -107,31 +107,7 @@ export async function callServiceAction(udn, callOptions) {
 
 export function createRendererEventSubcription(udn, instanceId, eventHandler) {
     const es = new EventSource(`${BASE_REST_URL}/renderer/${udn}/subscribe`);
-		
-    // Attach the one-time listener
-	function rendererEventSubcriptionInitializeCallback(event) {        
-	    try {
-	        const propertyList = JSON.parse(event.data);
-	        if (Array.isArray(propertyList)) {
-		        // Register generic handler for each property/event name
-		        propertyList.forEach(propertyName => {
-					//console.debug(`Register listener for: ${propertyName}`);
-		            es.addEventListener(propertyName, eventHandler);
-		        });	            
-	        } else {
-	            console.error('X_PROPERTIES must be a JSON array:', propertyList);				
-			}
-			
-	    } catch (err) {
-	        console.error('Failed to parse X_PROPERTIES data:', event.data, err);			
-	    }
-		
-	    // Remove the X_PROPERTIES listener (one-time use)
-	    es.removeEventListener('X_PROPERTIES', rendererEventSubcriptionInitializeCallback);
-	    //console.log('Removed X_PROPERTIES listener');
-	    return;
-	}
-	
-    es.addEventListener('X_PROPERTIES', rendererEventSubcriptionInitializeCallback);
+    es.addEventListener('LastChange', eventHandler);
+	es.addEventListener('RelativeTimePosition', eventHandler);
     return es; // Return the EventSource in case the caller wants to close it later
 }

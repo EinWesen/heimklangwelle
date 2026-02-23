@@ -150,22 +150,16 @@ public class RendererEndpointServlet extends HttpServlet {
 			}            
             
         }, 15, 5, TimeUnit.SECONDS);  
-        
-        synchronized (writeLock) {
-        	writer.write("event: X_PROPERTIES\n");
-            writer.write("data: "+new JSONArray(RendererSubscriptionPublisherCallback.SUPPORTED_PROPERTIES).toString()+"\n\n");
-            writer.flush();
-        }        
-        
+                
         // create callbacks
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(avTransport, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_AVTRANSPORT) {
         	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.apply("AvTransportSubscriptionStopped");}
-        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
+        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, JSONObject lastChangeEvent) {
         	    if (closed.get()) return;
         	    try {
         	        synchronized (writeLock) {
-        	        	writer.write("event: "+propertyName+"\n");
-        	            writer.write("data: "+propertyValueString+"\n\n");
+        	        	writer.write("event: LastChange\n");
+        	            writer.write("data: "+lastChangeEvent.toString(0) +"\n\n");
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {
@@ -175,12 +169,12 @@ public class RendererEndpointServlet extends HttpServlet {
         }));
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(renderingControl, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_RENDERINGCONTROL) {
         	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.apply("RenderingControlSubscriptionEnded");}
-        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
+        	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, JSONObject lastChangeEvent) {
         	    if (closed.get()) return;
         	    try {
         	        synchronized (writeLock) {
-        	        	writer.write("event: "+propertyName+"\n");
-        	            writer.write("data: "+propertyValueString+"\n\n");
+        	        	writer.write("event: LastChange\n");
+        	            writer.write("data: "+lastChangeEvent.toString(0) +"\n\n");
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {
