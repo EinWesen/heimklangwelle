@@ -192,7 +192,7 @@ export class RemoteRenderer {
 		});		
 	    this._eventSource.onerror = (err) => {	        
 	        this._eventSource.close();
-			this._triggerActionError("Disconnected from remote event source");
+			this._triggerActionError("Disconnected from remote event source").catch((ignore) => 'ERROR already reported');
 	    }			
 	}
 	
