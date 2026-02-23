@@ -1,5 +1,95 @@
 import * as api from "./restupnp.js";
 
+export class RelTimeHandler { 
+  constructor(timeElement) {
+	this._timeElement = timeElement;
+	this._relTimeTimer = undefined;
+	this._relTime = undefined;
+	this._relTimeStr = undefined;
+	this.reset();
+  }
+  
+  setSeconds(s) {
+	
+	if (s != this._relTime) {
+		this._relTime = s;		
+		const dateObj = new Date(0);
+		dateObj.setSeconds(s); 
+		this._relTimeStr = dateObj.toISOString().substring(11, 19);
+		this._relTimeChanged();		
+	}
+	return this;		
+  }
+  
+  setTimeStr(s) {
+	
+	if (s != this._relTimeStr) {
+		const timesplit = s.split(':');	
+		const newTime = parseInt(timesplit[2]) + (parseInt(timesplit[1])*60) + (parseInt(timesplit[0])*3600);
+	
+		if (Math.abs(this._relTime - newTime) > 2) {
+			this._relTime = newTime;
+			this._relTimeStr = s;
+			this._relTimeChanged();	
+		}
+	}
+	return this;		
+  }
+  
+  getTimeStr() {
+	return this._relTimeStr; 
+  }
+  
+  _clearTimer() {
+	if (this._relTimeTimer) {
+		clearInterval(this._relTimeTimer);
+	}		
+  }
+  
+  reset() {
+	this._clearTimer();
+	this._relTimeTimer = undefined;	
+	this.restart();
+	return this;
+  }
+
+  restart() {
+	if (this._relTime != 0) {
+		this._relTime = 0;
+		this._relTimeStr = '00:00:00';
+		this._relTimeChanged();		
+	}
+    return this;	
+  }
+
+  start() {
+	const self = this;
+	this._relTimeTimer = setInterval(() => {
+		self.setSeconds(this._relTime + 1);
+	}, 1000);
+	return this;	
+  }
+  
+  stop() {
+	this.reset();
+	return this;
+  }
+  
+  pause() {	
+	this._clearTimer();
+	return this;
+  }
+  
+  isRunning() {
+	return this._relTimeTimer != undefined;
+  }
+  
+  _relTimeChanged() {
+  	this._timeElement.textContent = this.getTimeStr();
+  }
+      
+}
+
 function tryParseTitleFromDidl(metaData) {
 	try {
 		const parser = new DOMParser();
@@ -67,13 +157,15 @@ export class RemoteRenderer {
 	this._volDebounceTimer = undefined;
 	this._stateDebounceTimer = undefined;
 	this._currentPlaylistItemUrl = '';
-	this._userstop = false; 
+	this._userstop = false;
+
+	this._relTime = new RelTimeHandler(document.getElementById(options["time-info"]));
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
 	this._titleElement = document.getElementById(options["transport-title"]);
 	this._trackTitleElement = document.getElementById(options["track-title"]);
-	this._timeElement = document.getElementById(options["time-info"]);
+	
 	this._volumeElement = document.getElementById(options["volume-slider"]);
 	this._stateElement = document.getElementById(options["transport-state"]);
 		
@@ -149,6 +241,8 @@ export class RemoteRenderer {
 		this._eventSource.close();		
 	}
 	
+	this._relTime.reset();
+	
 	this._properties = {
 		'AVTransportURI': '',
 		'AVTransportURIMetaData': '',
@@ -159,7 +253,7 @@ export class RemoteRenderer {
 		'TransportState': 'STOPPED',
 		'Mute': 'false',
 		'Volume': '100',
-		'RelativeTimePosition': ''
+		'RelativeTimePosition': '00:00:00'
 	}
 	this._remotePropertyChanged();
 	this.newPlaylist();
@@ -177,11 +271,13 @@ export class RemoteRenderer {
 				        return undefined;
 				    }
 				})();
-				
+								
 				if (eventData != undefined) {
+					const nextState = eventData['TransportState'];
+					const prevState = this._properties['TransportState'];
 					
 					// if we are stopped && were not stopped before
-					if (eventData['TransportState'] == 'STOPPED' && this._properties['TransportState'] != 'STOPPED') {
+					if ( nextState == 'STOPPED' && prevState != 'STOPPED') {
 						
 						// if the user did not ask for stop
 						if (this._userstop === false) {
@@ -193,21 +289,38 @@ export class RemoteRenderer {
 							this._userstop = false;
 						}
 						
-					}			
+						this._relTime.stop();					
 					
+					} else {
+						
+						if (prevState !== 'PAUSED_PLAYBACK' && nextState === 'PAUSED_PLAYBACK') {
+							this._relTime.pause();
+						} else if (prevState !== 'PLAYING' && nextState === 'PLAYING') {
+						    this._relTime.start();
+						}
+						
+						if (eventData['AVTransportURI'] != this._properties['AVTransportURI'] || eventData['CurrentTrackURI'] != this._properties['CurrentTrackURI']	|| eventData['CurrentTrack'] != this._properties['CurrentTrack'] ) {
+							this._relTime.restart();
+						}
+						
+						if (eventData['RelativeTimePosition'] != undefined && eventData['RelativeTimePosition'] != 'NOT_IMPLEMENTED' && eventData['RelativeTimePosition'] != '') {
+							this._relTime.setTimeStr(eventData['RelativeTimePosition']);
+						} 
+
+					}		
+										
 					Object.assign(this._properties, eventData);
-					
+					clearTimeout(this._stateDebounceTimer);	
+					this._stateDebounceTimer = setTimeout(() => {
+						this._remotePropertyChanged();			
+					}, 500); // adjust delay as needed
 					
 				}				
 				
 			} else if (event.type == 'RelativeTimePosition') {
 				this._properties[event.type] = event.data;
+				this._relTime.setTimeStr(event.data);
 			}
-						
-			clearTimeout(this._stateDebounceTimer);	
-			this._stateDebounceTimer = setTimeout(() => {
-				this._remotePropertyChanged();			
-			}, 500); // adjust delay as needed
 			
 		});
 	    this._eventSource.onerror = (err) => {	        
@@ -219,7 +332,6 @@ export class RemoteRenderer {
   }  
   
   _remotePropertyChanged() {	
-	  this._timeElement.textContent = this._properties['RelativeTimePosition'];
 	  this._stateElement.textContent = this._properties['TransportState'];
 	  this._volumeElement.value = this._properties['Volume'];
 	
@@ -235,8 +347,6 @@ export class RemoteRenderer {
 	  	transportTitle = transportUri;		
 	  }
 	  this._titleElement.textContent = transportTitle;
-	
-	
 	
 	  // Update track title display
 	  let trackTitle = undefined;	
