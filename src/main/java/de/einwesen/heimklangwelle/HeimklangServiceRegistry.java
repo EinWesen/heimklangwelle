@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.Iterator;
 
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -95,8 +96,9 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
     	final DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(rendererInstance.getClass().getName()));
         DeviceType type = new UDADeviceType("MediaRenderer", 1);
 
+        final String hostname = getLocalHostname();
         final DeviceDetails details = new DeviceDetails(
-                HeimklangStation.class.getPackageName() + " " +  type.getDisplayString(),
+        		"HeimklangWelle" + (hostname != null ? (" (" + hostname + ")") : ""),
                 new ManufacturerDetails("https://github.com/EinWesen"),
                 new ModelDetails(
                         rendererInstance.getClass().getSimpleName(),
@@ -193,8 +195,9 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
     	DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier(ContentDirectoryServiceImpl.class.getName()));
         DeviceType type = new UDADeviceType("MediaServer", 1);
 
+        final String hostname = getLocalHostname();
         DeviceDetails details = new DeviceDetails(
-        		HeimklangStation.class.getPackageName() + " " +  type.getDisplayString(),
+        		"HeimklangWelle" + (hostname != null ? (" (" + hostname + ")") : ""),
                 new ManufacturerDetails("https://github.com/EinWesen"),
                 new ModelDetails(
                 		ContentDirectoryServiceImpl.class.getName(),
@@ -281,14 +284,40 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 		super.startup();
 	}
 	
-	
-	
 	public static HeimklangServiceRegistry getInstance() {
     	return instance;
     }
 
 	public static String getContentServerBase() {
 		return instance.contentServerBase;
+	}
+	
+	private static String getLocalHostname() {
+        String hostname = System.getenv("HOSTNAME");
+        
+        if (hostname == null || "".equals(hostname.trim())) {
+            hostname = System.getenv("COMPUTERNAME");
+        }
+        
+        if (hostname == null || "".equals(hostname.trim())) {
+            try {
+				InetAddress ip = InetAddress.getLocalHost();
+				hostname = ip.getHostName();
+				
+				if ( hostname != null && ("127.0.0.1".equals(hostname) || "localhost".equals(hostname.toLowerCase())) ) {
+					hostname = null;
+				}
+				
+			} catch (UnknownHostException e) {
+				hostname = null;
+			}        	
+        }
+        
+        if (hostname != null && "".equals(hostname.trim())) {
+        	hostname = null;
+        }
+        
+        return hostname;		
 	}
 	
 }
