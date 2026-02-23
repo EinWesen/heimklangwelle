@@ -128,7 +128,7 @@ public class UpnpServiceRegistry {
 		return this.registeredMediaDevices.get(udn);
 	}    
 
-	public SubscriptionCallback registerCallback(SubscriptionCallback callback) {
+	public <C extends SubscriptionCallback> C registerCallback(C callback) {
 		upnpService.getControlPoint().execute(callback);
 		return callback;
 	}

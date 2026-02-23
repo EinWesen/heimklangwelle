@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -18,7 +19,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jupnp.controlpoint.SubscriptionCallback;
 import org.jupnp.model.gena.GENASubscription;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.Service;
@@ -73,9 +73,9 @@ public class RendererEndpointServlet extends HttpServlet {
         final String remoteHost = req.getRemoteHost();
         final Object writeLock = new Object();
         final AtomicBoolean closed = new AtomicBoolean(false);
-        final ArrayList<SubscriptionCallback> callbacks = new ArrayList<>(2);
+        final ArrayList<RendererSubscriptionPublisherCallback> callbacks = new ArrayList<>(2);
         final ScheduledExecutorService relPosAndHeartBeat = Executors.newSingleThreadScheduledExecutor();
-
+        
         // --- START ASYNC ---
         final AsyncContext async = req.startAsync();
         async.setTimeout(0); // disable container timeout
@@ -89,22 +89,34 @@ public class RendererEndpointServlet extends HttpServlet {
         asyncResp.setHeader("Connection", "keep-alive");
         
         final PrintWriter writer = asyncResp.getWriter();
-
-        // --- Central cleanup ---
-        final Runnable cleanup = () -> {
-            if (!closed.compareAndSet(false, true)) return;
-            LOGGER.debug("Doing cleanup for: " + remoteHost);
-            relPosAndHeartBeat.shutdownNow();
-            callbacks.forEach(callback -> callback.end());
-            async.complete();
-        };        
+        
+        final Function<String, Boolean> cleanup = (String source) -> {
+        	LOGGER.trace("Cleanup called from " + source);
+        	if (!closed.compareAndSet(false, true)) return Boolean.FALSE;
+        	
+        	new Thread(new Runnable() {
+				@Override
+				public void run() {
+					LOGGER.debug("Doing cleanup for: " + remoteHost);
+					relPosAndHeartBeat.shutdownNow();
+					callbacks.forEach(callback -> {
+						if (callback.isActive()) {
+							callback.end();
+						}
+					});
+					async.complete();
+				}
+			}, "UpnpSubscriptionCleanup").start();
+        	
+        	return Boolean.TRUE;
+        };
         
         // --- AsyncListener to detect disconnects ---
         async.addListener(new AsyncListener() {
         	@Override public void onStartAsync(AsyncEvent event) throws IOException {}
-        	@Override public void onComplete(AsyncEvent event) throws IOException {cleanup.run();}
-        	@Override public void onTimeout(AsyncEvent event) throws IOException {cleanup.run();}
-        	@Override public void onError(AsyncEvent event) throws IOException {cleanup.run();}
+        	@Override public void onComplete(AsyncEvent event) throws IOException {cleanup.apply("AsyncListenerComplete");}
+        	@Override public void onTimeout(AsyncEvent event) throws IOException {cleanup.apply("AsyncListenerTimeout");}
+        	@Override public void onError(AsyncEvent event) throws IOException {cleanup.apply("AsyncListenerError");}
         });
         
         // schedule a heartbeat
@@ -117,7 +129,7 @@ public class RendererEndpointServlet extends HttpServlet {
                     writer.flush();
                 }
             } catch (Throwable e) {
-                cleanup.run();
+                cleanup.apply("HeartBeatWriteError");
                 return;
             }
             
@@ -130,7 +142,7 @@ public class RendererEndpointServlet extends HttpServlet {
         	            writer.write("data: "+relTime+"\n\n");
         	        }
 	            } catch (Throwable e) {
-	                cleanup.run();
+	            	cleanup.apply("RelPosWriteError");
 	                return;
 	            }				
 			} catch (Throwable t) {
@@ -147,7 +159,7 @@ public class RendererEndpointServlet extends HttpServlet {
         
         // create callbacks
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(avTransport, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_AVTRANSPORT) {
-        	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.run();}
+        	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.apply("AvTransportSubscriptionStopped");}
         	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
         	    if (closed.get()) return;
         	    try {
@@ -157,12 +169,12 @@ public class RendererEndpointServlet extends HttpServlet {
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {
-        	        cleanup.run();
+        	    	cleanup.apply("AvTransportSubscriptionWriteError");
         	    }			
         	}        	
         }));
         callbacks.add(HeimklangServiceRegistry.getInstance().registerCallback(new RendererSubscriptionPublisherCallback(renderingControl, 600, RendererSubscriptionPublisherCallback.SUBSCRIPTION_RENDERINGCONTROL) {
-        	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.run();}
+        	@Override protected void stopped(@SuppressWarnings("rawtypes") GENASubscription subscription) {cleanup.apply("RenderingControlSubscriptionEnded");}
         	@Override protected void publish(@SuppressWarnings("rawtypes") GENASubscription subscription, String propertyName, String propertyValueString) {
         	    if (closed.get()) return;
         	    try {
@@ -172,7 +184,7 @@ public class RendererEndpointServlet extends HttpServlet {
         	            writer.flush();
         	        }
         	    } catch (Throwable e) {
-        	        cleanup.run();
+        	    	cleanup.apply("RenderingControlSubscriptionWriteError");
         	    }			
         	}        	
         }));

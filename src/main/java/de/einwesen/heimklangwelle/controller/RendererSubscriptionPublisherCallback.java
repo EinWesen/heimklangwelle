@@ -39,6 +39,7 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	public static final int SUBSCRIPTION_RENDERINGCONTROL = 2;
 	
 	private final Map<String, String> lastStates = Collections.synchronizedMap(new HashMap<>());
+	private boolean active = false;
 	
     /**
 	 * @param service
@@ -135,6 +136,7 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	@Override
 	public void ended(GENASubscription subscription, CancelReason reason, UpnpResponse response) {
 		super.ended(subscription, reason, response);
+		this.active = false;
 		stopped(subscription);
 	}
 
@@ -142,6 +144,7 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 	@Override
 	public void failed(GENASubscription subscription, UpnpResponse responseStatus, Exception exception, String defaultMsg) {
 		super.failed(subscription, responseStatus, exception, defaultMsg);
+		this.active = false;
 		stopped(subscription);
 	}
 
@@ -161,6 +164,17 @@ public abstract class RendererSubscriptionPublisherCallback extends LastChangeAw
 		}
 	}	
 	
+	@SuppressWarnings("rawtypes")
+	@Override
+	public void established(GENASubscription subscription) {
+		super.established(subscription);
+		this.active = true;
+	}
+	
+	public boolean isActive() {
+		return active;
+	}
+
 	@SuppressWarnings("rawtypes")
 	protected abstract void stopped(GENASubscription subscription);
 	@SuppressWarnings("rawtypes")
