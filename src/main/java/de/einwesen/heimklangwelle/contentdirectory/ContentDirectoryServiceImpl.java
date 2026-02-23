@@ -7,9 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Comparator;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,12 +70,12 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 	private static final Decoder BASE64DECODER = Base64.getUrlDecoder();
 
 	@Override
-	public BrowseResult browse(String objectID, BrowseFlag browseFlag, String filter, long firstResult, long maxResults,
+	public BrowseResult browse(String objectID, BrowseFlag browseFlag, String metadataFieldFilter, long firstResult, long maxResults,
 			SortCriterion[] orderby) throws ContentDirectoryException {
 
 		try {
 			ArrayList<DIDLObject> didlObjects = new ArrayList<>();
-			LOGGER.trace("%s \"%s\" (%s) %d - %d".formatted(browseFlag, objectID, filter, firstResult, maxResults));			
+			LOGGER.trace("%s \"%s\" (%s) %d - %d".formatted(browseFlag, objectID, metadataFieldFilter, firstResult, maxResults));			
 			
 			// root container
 			if ("0".equals(objectID)) {
@@ -91,7 +91,8 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 						rootContainer.setChildCount(File.listRoots().length);
 						didlObjects.add(rootContainer);
 						break;
-					case DIRECT_CHILDREN: // Return children
+					case DIRECT_CHILDREN: // Return children						
+						
 						for (File drive : File.listRoots()) {
 							StorageVolume  driveContainer = new StorageVolume();						
 							driveContainer.setId(encodeItemId(drive));
@@ -153,13 +154,13 @@ public class ContentDirectoryServiceImpl extends AbstractContentDirectoryService
 				if (firstResult < didlObjects.size()) {
 					
 					if (didlObjects.size() > 1) {
-						// We sort for convinience, but also need predictabel order for paging
+						// We sort for convinience, but also need predictable order for paging
 						
 						//TODO: Needs to take locale into account 
 						didlObjects.sort(new Comparator<DIDLObject>() {
 							@Override
 							public int compare(DIDLObject o1, DIDLObject o2) {
-								return o1.getTitle().compareTo(o2.getTitle());
+								return o1.getTitle().toLowerCase().compareTo(o2.getTitle().toLowerCase());
 							}				
 						});
 					}
