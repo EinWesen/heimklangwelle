@@ -27,7 +27,11 @@ public class GetPositionInfoCallbackFuture extends GetPositionInfo implements Fe
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
-		this.completableFuture.completeExceptionally(new ActionException(operation != null ? operation.getStatusCode() : 0, defaultMsg));		
+		if (invocation.getFailure() != null) {
+			this.completableFuture.completeExceptionally(invocation.getFailure());
+		} else {			
+			this.completableFuture.completeExceptionally(new ActionException(operation != null ? operation.getStatusCode() : 0, defaultMsg));		
+		}		
 	}
 
 	@Override
