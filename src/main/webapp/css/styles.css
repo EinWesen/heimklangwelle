@@ -126,6 +126,9 @@ h1 {
 #playlist-ul.item-list li span:nth-child(2) {
 	flex: 1;	
 }
+#playlist-ul.item-list li span.play {
+	margin-left: 5px;	
+}
 
 #folder-list.item-list li {
   	justify-content: space-between; /* Verteilt Spans an die Ränder */     
@@ -133,7 +136,9 @@ h1 {
 #folder-list.item-list li span:nth-child(2) {
 	flex: 1;	
 }
-
+#folder-list.item-list li span.remove {
+	margin-left: 5px;
+}
 .toast {
   position: fixed;
   top: 20px;
