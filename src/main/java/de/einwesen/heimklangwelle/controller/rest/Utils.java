@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -17,6 +18,12 @@ import org.jupnp.model.meta.Action;
 import org.jupnp.model.meta.ActionArgument;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.Service;
+import org.jupnp.support.contentdirectory.DIDLParser;
+import org.jupnp.support.model.DIDLContent;
+import org.jupnp.support.model.Res;
+import org.jupnp.support.model.container.Container;
+import org.jupnp.support.model.item.Item;
+import org.jupnp.xml.ParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,6 +139,90 @@ public class Utils {
 		}		
 		
 		return null;
+	}
+	
+	public static JSONObject getJSONContent(DIDLContent didlContent) throws ParserException {
+		final DIDLParser didlParser = new DIDLParser();
+		return getJSONContent(didlContent, didlParser);
+	}
+	
+	public static JSONObject getJSONContainer(Container container) throws ParserException {
+		final DIDLParser didlParser = new DIDLParser();
+		return getJSONContainer(container, didlParser);
+	}
+	
+	public static JSONObject getJSONContent(DIDLContent didlContent, DIDLParser didlParser) throws ParserException {
+    	final JSONObject jsonResult = new JSONObject();
+    	final JSONArray jsonChildren = new JSONArray();
+    	jsonResult.put("children", jsonChildren);		
+    	
+    	if (didlContent != null) {
+			jsonResult.put("childCount", didlContent.getCount());			
+			
+			for (Container container : didlContent.getContainers()) {
+				jsonChildren.put(getJSONContainer(container, didlParser));
+			}
+			
+			appendItemsToArray(jsonChildren, didlContent.getItems(), didlParser);
+		
+    	}  else {
+    		jsonResult.put("childCount", 0);
+    	}
+    	
+    	return jsonResult;
+	}
+	
+	public static JSONObject getJSONContainer(Container container, DIDLParser didlParser) throws ParserException {
+		final JSONObject jsonChild = new JSONObject();
+		jsonChild.put("id", container.getId());
+		jsonChild.put("parentId", container.getParentID());
+		jsonChild.put("title", container.getTitle());
+		jsonChild.put("childCount", container.getChildCount());
+		jsonChild.put("isContainer", true);
+		if (container.getWriteStatus() != null) {
+			jsonChild.put("writeStatus", container.getWriteStatus().name());					
+		}
+		
+		if (container.getItems() != null && container.getItems().size() > 0) {
+			final JSONArray jsonSubChildren = new JSONArray();
+			appendItemsToArray(jsonSubChildren, container.getItems(), didlParser);
+			jsonChild.put("children", jsonSubChildren);
+		}
+		
+		return jsonChild;		
+	}
+	
+	private static void appendItemsToArray(final JSONArray jsonChildren, final List<Item> items, final DIDLParser didlParser) throws ParserException {
+		
+		for (Item item : items) {
+			final JSONObject jsonChild = new JSONObject();
+			jsonChild.put("id", item.getId());
+			jsonChild.put("parentId", item.getParentID());
+			jsonChild.put("title", item.getTitle());
+			
+			if (item.getResources().size() == 1) {					
+				final Res res = item.getResources().get(0);
+				jsonChild.put("uri", res.getValue());
+				jsonChild.put("mimeType", res.getProtocolInfo().getContentFormatMimeType().getType());
+				
+				final DIDLContent content =  new DIDLContent();
+				content.addItem(item);		
+				
+				String uriMetaData;
+				try {
+					uriMetaData = didlParser.generate(content);
+				} catch (Exception e) {
+					throw new ParserException("Error generating metaData", e);
+				}
+				
+				jsonChild.put("uriMetaData", uriMetaData);
+			} else if (item.getResources().size() > 1) {
+				throw new IllegalStateException("Items with multipole resources are not supported right now");
+			} 
+			jsonChild.put("isContainer", false);
+			jsonChildren.put(jsonChild);
+		}
+		
 	}
 
 }

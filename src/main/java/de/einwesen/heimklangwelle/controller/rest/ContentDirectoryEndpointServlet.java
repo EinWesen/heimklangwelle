@@ -8,19 +8,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.Service;
 import org.jupnp.model.types.UDAServiceType;
-import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.contentdirectory.callback.Browse;
 import org.jupnp.support.model.BrowseFlag;
 import org.jupnp.support.model.DIDLContent;
-import org.jupnp.support.model.Res;
 import org.jupnp.support.model.SortCriterion;
-import org.jupnp.support.model.container.Container;
-import org.jupnp.support.model.item.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,51 +94,15 @@ public class ContentDirectoryEndpointServlet extends HttpServlet {
         		}        	
         	}
         	
-        	final JSONObject jsonResult = new JSONObject();
-        	final JSONArray jsonChildren = new JSONArray();
-        	jsonResult.put("children", jsonChildren);
-			
+
+        	final JSONObject jsonResult;
         	if (resultWillBeEmpty) {
         		// We already know there are no children 
-        		jsonResult.put("childCount", 0);        		
+        		jsonResult = Utils.getJSONContent(null);        		
         	} else {
 	        	final BrowseCallbackFuture browseCallback = new BrowseCallbackFuture(contentDirectory, id, BrowseFlag.DIRECT_CHILDREN, filter , firstResult , maxResults, sort);
 				final DIDLContent didlContent =  HeimklangServiceRegistry.getInstance().execute(browseCallback).get(30, TimeUnit.SECONDS);
-	
-				jsonResult.put("childCount", didlContent.getCount());			
-				
-				for (Container container : didlContent.getContainers()) {
-					final JSONObject jsonChild = new JSONObject();
-					jsonChild.put("id", container.getId());
-					jsonChild.put("parentId", container.getParentID());
-					jsonChild.put("title", container.getTitle());
-					jsonChild.put("childCount", container.getChildCount());
-					jsonChild.put("isContainer", true);
-					jsonChildren.put(jsonChild);
-				}
-				
-				final DIDLParser didlParser = new DIDLParser();
-				
-				for (Item item : didlContent.getItems()) {
-					final JSONObject jsonChild = new JSONObject();
-					jsonChild.put("id", item.getId());
-					jsonChild.put("parentId", item.getParentID());
-					jsonChild.put("title", item.getTitle());
-					
-					if (item.getResources().size() == 1) {					
-						final Res res = item.getResources().getFirst();
-						jsonChild.put("uri", res.getValue());
-						jsonChild.put("mimeType", res.getProtocolInfo().getContentFormatMimeType().getType());
-						
-						final DIDLContent content =  new DIDLContent();
-						content.addItem(item);					
-						jsonChild.put("uriMetaData", didlParser.generate(content));
-					} else {
-						throw new IllegalStateException("Items with multipole resources are not supported right now");
-					}
-					jsonChild.put("isContainer", false);
-					jsonChildren.put(jsonChild);
-				}
+				jsonResult = Utils.getJSONContent(didlContent);
         	}
 			
 			Utils.sendJSON(jsonResult, resp);
