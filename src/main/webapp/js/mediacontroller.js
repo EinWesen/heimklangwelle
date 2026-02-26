@@ -1,4 +1,4 @@
-import * as api from "./restupnp.js";
+import { DefaultRemoteRenderer } from "./renderer.js";
 
 export class RelTimeHandler { 
   constructor(timeElement) {
@@ -142,14 +142,12 @@ function createPlaylistLi(item, index) {
 	return li;
 }
 
-export class RemoteRenderer { 
+export class MediaController { 
   static EVENT_NAME_ACTIONFAILED = 'actionFailed';
   static EVENT_NAME_PLAYLIST_DBLCLICK = 'PlaylistDblClick';
   static EVENT_NAME_PLAYLIST_REMOVE = 'PlaylistRemoveItem';
   
   constructor(options) {
-	this._deviceUdn = undefined;
-	this._instanceId = undefined;
 	this._properties = undefined;		
 	this._eventSource = undefined;
 	this._playlist = undefined;		
@@ -160,6 +158,7 @@ export class RemoteRenderer {
 	this._userstop = false;
 
 	this._relTime = new RelTimeHandler(document.getElementById(options["time-info"]));
+	this._renderer = new DefaultRemoteRenderer();
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
@@ -196,7 +195,10 @@ export class RemoteRenderer {
 				this._removePlaylistListItem(li);
 			} else {
 		   	   this._containerElement.dispatchEvent(
-			   		new CustomEvent(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, {detail : this._playlist[li.dataset.itemindex]})
+			   		new CustomEvent(MediaController.EVENT_NAME_PLAYLIST_DBLCLICK, {detail: { 
+						itemindex: li.dataset.itemindex, 
+						item: this._playlist[li.dataset.itemindex]
+					}})
 			   );		   					
 			}			
 		}
@@ -228,13 +230,12 @@ export class RemoteRenderer {
 		   
 		}
 	});
-	
-	
+		
   }
   
   async selectDevice(udn, instanceId) {
-    this._deviceUdn = udn;
-	this._instanceId = instanceId;
+    this._renderer.deviceUdn = udn;
+	this._renderer.instanceId = instanceId;
 	this._userstop = false; 
 	
 	if (this._eventSource) {
@@ -256,10 +257,11 @@ export class RemoteRenderer {
 		'RelativeTimePosition': '00:00:00'
 	}
 	this._remotePropertyChanged();
-	this.newPlaylist();
 	
-	if (this._deviceUdn) {
-		this._eventSource = api.createRendererEventSubcription(udn, '0', (event) => {
+	this._updateLocalPlaylistItems(await this._renderer.getInitialPlaylist()); 
+	
+	if (udn) {
+		this._eventSource =  this._renderer.createRendererEventSubcription((event) => {
 			
 			if (event.type == 'LastChange') {
 				
@@ -281,9 +283,13 @@ export class RemoteRenderer {
 						
 						// if the user did not ask for stop
 						if (this._userstop === false) {
-							if (this._playlist.length > 0 && this.findCurrentPlaylistIndex() != (this._playlist.length - 1)) {
-								this.nextMedia().catch((errorInfo) => console.log("Unexpected fail of next()", errorInfo));
-							}				
+
+							if (this._renderer.playlistType==DefaultRemoteRenderer.PLAYLIST_TYPE_LOCAL) {
+								if (this._playlist.length > 0 && this.findCurrentPlaylistIndex() != (this._playlist.length - 1)) {								
+									this.nextMedia().catch((errorInfo) => console.log("Unexpected fail of next()", errorInfo));
+								}												
+							}	
+												
 						} else {
 							// reset
 							this._userstop = false;
@@ -399,70 +405,39 @@ export class RemoteRenderer {
   }
     
   async play() {
-	 return this._tryExecuteServiceCall({
-	   "serviceId": "AVTransport",
-	   "action": "Play",
-	   "inputArguments": {
-	      "InstanceID": this._instanceId,
-	      "Speed": "1"
-	   }
-	 });
+	return this._renderer.play().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
   async pause() {
-	return this._tryExecuteAVTransportCall0("Pause");
+	return this._renderer.pause().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
   async stop() {
-	return this._tryExecuteAVTransportCall0("Stop");
+	return this._renderer.stop().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
   async next() {
-  	return this._tryExecuteAVTransportCall0("Next");
+  	return this._renderer.next().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
   async previous() {
-	this._tryExecuteAVTransportCall0("Previous");  
+	return this._renderer.previous().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));  
   }
 
   async setVolume(volAsString) {
-	return this._tryExecuteServiceCall({
-	   "serviceId": "RenderingControl",
-	   "action": "SetVolume",
-	   "inputArguments": {
-	      "InstanceID": this._instanceId,
-	      "Channel": "Master",
-	      "DesiredVolume": volAsString
-	   }
-	}).then((apiResponse) => {
+	return this._renderer.setVolume(volAsString).then((apiResponse) => {
 		// prevents bouncing of the control until update arrives
 		this._properties['Volume'] = volAsString;
 		return apiResponse;
-	});
+	}).catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
   async toggleMute() {	
-	return this._tryExecuteServiceCall({
-	   "serviceId": "RenderingControl",
-	   "action": "SetMute",
-	   "inputArguments": {
-	      "InstanceID": this._instanceId,
-	      "Channel": "Master",
-	      "DesiredMute": (this.properties['Mute'] == 'true' ? 'false' : 'true')
-	   }
-	});		
+	return this._renderer.setMute(this.properties['Mute'] == 'true' ? 'false' : 'true').catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }  
 
   async setAVTransportItem(item) {
-	return this._tryExecuteServiceCall({
-	   "serviceId": "AVTransport",
-	   "action": "SetAVTransportURI",
-	   "inputArguments": {
-	      "InstanceID": this._instanceId,
-	      "CurrentURI": item.uri,
-	      "CurrentURIMetaData": item.uriMetaData
-	   }
-	});
+	return this._renderer.setAVTransportItem(item).catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
   
   addEventListener(type, listener) {
@@ -471,91 +446,109 @@ export class RemoteRenderer {
 
   _triggerActionError(message) {
   	this._containerElement.dispatchEvent(
-      new CustomEvent(RemoteRenderer.EVENT_NAME_ACTIONFAILED, {detail : message})
+      new CustomEvent(MediaController.EVENT_NAME_ACTIONFAILED, {detail : message})
   	);
 	return Promise.reject(message);
   }
   
-  async _tryExecuteAVTransportCall0(actionName) {
-	return this._tryExecuteServiceCall({
-	  "serviceId": "AVTransport",
-	  "action": actionName,
-	  "inputArguments": {
-	     "InstanceID": this._instanceId
-	  }
-	});  
-  }
-  
-  async _tryExecuteServiceCall(callOptions) {
-  	if (this._deviceUdn) {
-		return api.callServiceAction(this._deviceUdn, callOptions).catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));		
+  _updateLocalPlaylistItems(plData) {
+	if (plData != undefined) {
+		console.error("setPlayList", plData);
 	} else {
-		return this._triggerActionError('No connected device');
+		return this._emptyLocalPlaylist();
 	}
-  }  
-  
-  newPlaylist() {
-  	this._playlist = [];
-  	this._playlistContainerElement.innerHTML = '';
-	this._currentPlaylistItemUrl = '';	
   }
   
-  addToPlaylist(item, replace) {	
-	if (replace) {
-		this.newPlaylist();
+  async newPlaylist() {
+	this._renderer.newPlaylist().then((apiResponse) => {
+	  	this._emptyLocalPlaylist();			
+	}).catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
+  }
+  
+  _emptyLocalPlaylist() {
+	this._playlist = [];
+	this._playlistContainerElement.innerHTML = '';
+	this._currentPlaylistItemUrl = '';		
+  }
+  
+  async addToPlaylist(item, replace) {	
+		
+	if (!replace) {
+		// TODO: Allow double entries in playlist
+		// The only reason that is not allowed at the moment is, that i don't want to deal
+		// with identifying the current track in that case
+		for (const entry of this._playlist) {
+			if (entry.uri == item.uri) {
+				return -1;
+			}
+		}	
 	}
-	
-	// TODO: Allow double entries in playlist
-	// The only reason that is not allowed at the moment is, that i don't want to deal
-	// with identifying the current track in that case
-	for (const entry of this._playlist) {
-		if (entry.uri == item.uri) {
-			return -1;
-		}
-	}	
+		
+	try {
+		await this._renderer.addToPlaylist(item, replace);
+		
+		const index = this._playlist.push(item) - 1;
+		this._playlistContainerElement.appendChild(createPlaylistLi(item, index));
+		return index;		
+	} catch(errInfo) {
+		this._triggerActionError('Action failed: ' + errInfo.summary).catch(reportedError => undefined);
+		return -2;			
+	}			
 	  
-	const index = this._playlist.push(item) - 1;
-	this._playlistContainerElement.appendChild(createPlaylistLi(item, index));
-	return index;		
   }
   
-  _removePlaylistListItem(htmlLi) {
+  async _removePlaylistListItem(htmlLi) {
 	// TODO: Allow removing active item
   	// The only reason that is not allowed at the moment is, that i don't want to deal
   	// with the implications on the remote renderer (in the future ;) )
+	return new Promise((resolve, reject) => {
+	  	if (!htmlLi.classList.contains('active')) {
+			
+			this._renderer.removeFromPlaylist(htmlLi.dataset.itemindex).then((apiResponse) => {
+				this._playlistContainerElement.removeChild(htmlLi);
+	  			resolve(this._playlist.splice(htmlLi.dataset.itemindex, 1)[0]);
+			}).catch((errInfo) => {
+				this._triggerActionError('Action failed: ' + errInfo.summary).catch(reject);
+			});
+			
+		} else {
+			this._triggerActionError('The currently active media can not be removed from the list').catch(reject);
+		}		
+	});
 	
-  	if (!htmlLi.classList.contains('active')) {
-		
-		this._playlistContainerElement.removeChild(htmlLi);
-  		return Promise.resolve(this._playlist.splice(htmlLi.dataset.itemindex, 1)[0]);
-	} else {
-		return this._triggerActionError('The currently active media can not be removed from the list');
-	}
+	
   }  
-  
-  _movePlaylistItem(from,to) {
+   
+  async _movePlaylistItem(from,to) {
 	  if (from !== to) {
 	  	
-	  	// Move html node
-	  	const movedNode = this._playlistContainerElement.children[from];
-	
-	  	if (from > to) {
-	  		this._playlistContainerElement.children[to].before(movedNode);
-	  	} else {
-	  		this._playlistContainerElement.children[to].after(movedNode);
-	  	} 
-	
-	  	// Update indices on html element
-	  	const changeStart = Math.min(from, to);
-	  	const changeEnd = Math.max(from, to);
-	
-	  	for (let i=changeStart;i<=changeEnd;i++) {
-	  		this._playlistContainerElement.children[i].dataset.itemindex = i;
-	  	}	
-	  	
-	  	// Move in internal playlist as well
-	  	const movedItem = this._playlist.splice(from, 1)[0];
-	  	this._playlist.splice(to, 0, movedItem);					
+		this._renderer.movePlaylistItem(from, to).then((apiResponse) => {
+		
+		  	// Move html node
+		  	const movedNode = this._playlistContainerElement.children[from];
+		
+		  	if (from > to) {
+		  		this._playlistContainerElement.children[to].before(movedNode);
+		  	} else {
+		  		this._playlistContainerElement.children[to].after(movedNode);
+		  	} 
+		
+		  	// Update indices on html element
+		  	const changeStart = Math.min(from, to);
+		  	const changeEnd = Math.max(from, to);
+		
+		  	for (let i=changeStart;i<=changeEnd;i++) {
+		  		this._playlistContainerElement.children[i].dataset.itemindex = i;
+		  	}	
+		  	
+		  	// Move in internal playlist as well
+		  	const movedItem = this._playlist.splice(from, 1)[0];
+		  	this._playlist.splice(to, 0, movedItem);
+			
+			return true;					
+		}).catch((errInfo) => {
+			return this._triggerActionError('Action failed: ' + errInfo.summary).catch(ignore => false);
+		});
 	  }
   	
   }
@@ -577,10 +570,16 @@ export class RemoteRenderer {
 		let nextItem = currentItemIndex == -1 ? 0 : (currentItemIndex + 1);
 		
 		if (nextItem < this._playlist.length) {
-			if (this.isPlaying()) {
-				return this.playAVTransportItem(this._playlist[nextItem]);				
+			if (this._renderer.playlistType==DefaultRemoteRenderer.PLAYLIST_TYPE_LOCAL) {
+				if (this.isPlaying()) {
+					return this.setAVTransportItem(this._playlist[nextItem]).then((apiResult) => {
+						return this.play();	
+					});				
+				} else {
+					return this.setAVTransportItem(this._playlist[nextItem]);
+				}
 			} else {
-				return this.setAVTransportItem(this._playlist[nextItem]);
+				return this.next();
 			}
 		}
 	}
@@ -594,10 +593,16 @@ export class RemoteRenderer {
 		let nextItem = currentItemIndex == -1 ? (this._playlist.length-1) : (currentItemIndex - 1);
 		
 		if (nextItem >= 0) {
-			if (this.isPlaying()) {
-				return this.playAVTransportItem(this._playlist[nextItem]);				
+			if (this._renderer.playlistType==DefaultRemoteRenderer.PLAYLIST_TYPE_LOCAL) {
+				if (this.isPlaying()) {					
+					return this.setAVTransportItem(this._playlist[nextItem]).then((apiResult) => {
+						return this.play();	
+					});				
+				} else {
+					return this.setAVTransportItem(this._playlist[nextItem]);
+				}
 			} else {
-				return this.setAVTransportItem(this._playlist[nextItem]);
+				return this.previous();
 			}
 		}
 	}
@@ -605,15 +610,15 @@ export class RemoteRenderer {
 	return this._triggerActionError('No previous media in playlist');
   }
   
-  async playAVTransportItem(item) {
-	return this.setAVTransportItem(item).then((apiResult) => {
-		return this.play();	
-	});	
+  async playEntry(entryObject) {
+	return this._renderer.playEntry(entryObject).catch((errInfo) => {
+		this._triggerActionError('Action failed: ' + errInfo.summary).catch(AlreadyReportedError => undefined);
+	});
   } 
   
   isPlaying() {
 	return 	this._properties['TransportState'] == 'PLAYING';
-  }
+  }  
 
 }
   

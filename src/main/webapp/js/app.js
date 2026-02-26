@@ -1,6 +1,6 @@
 import * as api from "./restupnp.js";
 import { ContentServerBrowser } from "./contentbrowser.js";
-import { RemoteRenderer } from "./renderer.js";
+import { MediaController } from "./mediacontroller.js";
 
 const SERVER_SELECT_ID = 'select-server';
 const RENDERER_SELECT_ID = 'select-renderer';
@@ -9,7 +9,7 @@ const NEW_PL_BUTTON = 'btn-pl-clear';
 const ADD_URI_TO_PL_BUTTON = 'btn-pl-add';
 
 const CONTENTBROWSER = new ContentServerBrowser('folder-list');
-const MEDIARENDERER = new RemoteRenderer({
+const MEDIACONTROLLER = new MediaController({
 	'player-panel' : 'player-panel',
 	'btn-play' : 'btn-play',
 	'btn-pause' : 'btn-pause',
@@ -80,29 +80,29 @@ async function loadDevices() {
 
 
 async function init() {	
-	MEDIARENDERER.addEventListener(RemoteRenderer.EVENT_NAME_ACTIONFAILED, (event) => {
+	MEDIACONTROLLER.addEventListener(MediaController.EVENT_NAME_ACTIONFAILED, (event) => {
 		showToast(event.detail);
 	});
 	
-	MEDIARENDERER.addEventListener(RemoteRenderer.EVENT_NAME_PLAYLIST_DBLCLICK, (event) => {
-		MEDIARENDERER.playAVTransportItem(event.detail).catch((errorInfo) => {
+	MEDIACONTROLLER.addEventListener(MediaController.EVENT_NAME_PLAYLIST_DBLCLICK, (event) => {
+		MEDIACONTROLLER.playEntry(event.detail).catch((errorInfo) => {
 			// Error is already reporte dinternall
 			console.error(errorInfo);
 			return;
 		});
 	});
 	
-	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, (event) => {
-		const playlistindex = MEDIARENDERER.addToPlaylist(event.detail.item, event.detail.play);
-		if (playlistindex === 0 && !MEDIARENDERER.isPlaying()) {
-			MEDIARENDERER.playAVTransportItem(event.detail.item).catch((errorInfo) => {
+	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, async (event) => {
+		const playlistindex = (await MEDIACONTROLLER.addToPlaylist(event.detail.item, event.detail.play));
+		if (playlistindex === 0 && !MEDIACONTROLLER.isPlaying()) {
+			MEDIACONTROLLER.playEntry({itemindex: playlistindex, item: event.detail.item}).catch((errorInfo) => {
 				// Error is already reported internally
 				console.error(errorInfo);
 				return;
 			});
 		} else if (playlistindex === -1) {
 			showToast("Item is already in the playlist");
-		}
+		} 
 	});	
 			
 	document.getElementById(SERVER_SELECT_ID).onchange = (event) => {
@@ -111,17 +111,17 @@ async function init() {
 	
 	document.getElementById(RENDERER_SELECT_ID).onchange = (event) => {
 		if (event.target.value == '-') {
-			MEDIARENDERER.selectDevice(undefined, undefined);			
+			MEDIACONTROLLER.selectDevice(undefined, undefined);			
 		} else {			
 			// TODO: Where to get instanceId ? 
-			MEDIARENDERER.selectDevice(event.target.value, "0");
+			MEDIACONTROLLER.selectDevice(event.target.value, "0");
 		}
 	};	
 	
 	document.getElementById(ADD_URI_TO_PL_BUTTON).onclick = (event) => {
 		const uri = prompt("Please enter uri", "").trim();
 		if (uri != '') { 
-			MEDIARENDERER.addToPlaylist({
+			MEDIACONTROLLER.addToPlaylist({
 				id: "-1_" + performance.now(),
 				isContainer: false,
 				mimeType: "audio",
@@ -133,7 +133,7 @@ async function init() {
 		}		
 	};
 	
-	document.getElementById(NEW_PL_BUTTON).onclick = (event) => {MEDIARENDERER.newPlaylist();};
+	document.getElementById(NEW_PL_BUTTON).onclick = (event) => {MEDIACONTROLLER.newPlaylist();};
 	document.getElementById(REFRESH_DEVICE_BUTTON).onclick = loadDevices;
 
 	loadDevices();
