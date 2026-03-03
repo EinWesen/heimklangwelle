@@ -85,6 +85,12 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
 					}
 				};
 			}
+
+			@Override
+			protected NetworkAddressFactory createNetworkAddressFactory(int streamListenPort, int multicastResponsePort) {
+				return new HeimklangNetworkAdressFactoryImpl(streamListenPort, multicastResponsePort);				
+			}			
+			
 		});
 	}
 	

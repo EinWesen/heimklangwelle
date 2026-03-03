@@ -7,7 +7,8 @@ public class BasicTestsRunner {
 	
 	public final static Class<?>[] TESTCASES = new Class<?>[] {
 		OsDetection.class,
-		MpvBasics.class
+		MpvBasics.class,
+		ListNetworkInterfaces.class
 	};
 		
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
