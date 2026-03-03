@@ -56,20 +56,22 @@ export class ContentServerBrowser {
 	
 	this._containerElement.addEventListener("dblclick", (event) => {
 	  const li = event.target.closest("li");
-	  const item = this._items[li.dataset.itemindex];
-	  switch(li.dataset.itemtype) {
-	  	case 'back':
-			this.navigateUp();
-			return true;
-		case 'container':
-	     	this.browse(item);
-			return true;
-		case 'item':
-	     	this._triggerDblClick(item, (event.target.closest('.play') != null));
-			return true;
-		default:
-			alert("Unknown itemtype" + li.dataset.itemtype);
-			return false;		
+	  if (li != undefined) {
+		  const item = this._items[li.dataset.itemindex];
+		  switch(li.dataset.itemtype) {
+		  	case 'back':
+				this.navigateUp();
+				return true;
+			case 'container':
+		     	this.browse(item);
+				return true;
+			case 'item':
+		     	this._triggerDblClick(item, (event.target.closest('.play') != null));
+				return true;
+			default:
+				alert("Unknown itemtype" + li.dataset.itemtype);
+				return false;		
+		  }		
 	  }
 	});
   }
