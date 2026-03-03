@@ -63,6 +63,12 @@ async function loadDevices() {
 				o.setAttribute('value', device.udn)                
 				
 				if (device.type == 'MediaRenderer') {					
+					if (device.friendlyName.startsWith('HeimklangWelle')) {
+						o.dataset.rtype = "H";
+					} else {
+						o.dataset.rtype = "D";
+					}
+					
 					if (device.udn == selectedRenderer) {
 						o.setAttribute('selected', 'selected');
 					}
@@ -74,8 +80,7 @@ async function loadDevices() {
 					selServer.appendChild(o);
 				}				
             });
-        })
-        .catch(errInfo => alert('Error loading devices: ' + errInfo.summary));
+        }).catch(errInfo => alert('Error loading devices: ' + errInfo.summary));
 }
 
 
@@ -111,10 +116,10 @@ async function init() {
 	
 	document.getElementById(RENDERER_SELECT_ID).onchange = (event) => {
 		if (event.target.value == '-') {
-			MEDIACONTROLLER.selectDevice(undefined, undefined);			
+			MEDIACONTROLLER.selectDevice(undefined, undefined, "0");			
 		} else {			
 			// TODO: Where to get instanceId ? 
-			MEDIACONTROLLER.selectDevice(event.target.value, "0");
+			MEDIACONTROLLER.selectDevice(event.target.value, "0", event.target.options[event.target.selectedIndex].dataset.rtype);
 		}
 	};	
 	

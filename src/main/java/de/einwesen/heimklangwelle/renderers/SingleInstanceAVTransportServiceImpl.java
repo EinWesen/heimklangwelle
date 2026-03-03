@@ -11,6 +11,7 @@ import org.jupnp.support.model.MediaInfo;
 import org.jupnp.support.model.PlayMode;
 import org.jupnp.support.model.PositionInfo;
 import org.jupnp.support.model.RecordMediumWriteStatus;
+import org.jupnp.support.model.SeekMode;
 import org.jupnp.support.model.StorageMedium;
 import org.jupnp.support.model.TransportAction;
 import org.jupnp.support.model.TransportInfo;
@@ -128,17 +129,22 @@ public class SingleInstanceAVTransportServiceImpl extends AbstractAVTransportSer
 	}
 	
 	@Override
-	@UpnpExclude // We don't want to support this right now
 	public void seek(UnsignedIntegerFourBytes instanceId, String unit, String target) throws AVTransportException {
 		validateInstanceId(instanceId);
-		throw new AVTransportException(AVTransportErrorCode.SEEKMODE_NOT_SUPPORTED, "Unsupported seek mode: " + unit);
 		
-//		SeekMode seekMode;
-//        try {
-//            seekMode = SeekMode.valueOrExceptionOf(unit);
-//        } catch (IllegalArgumentException e) {
-//            throw new AVTransportException(AVTransportErrorCode.SEEKMODE_NOT_SUPPORTED, "Unsupported seek mode: " + unit);
-//        }
+		SeekMode seekMode;
+        try {
+            seekMode = SeekMode.valueOrExceptionOf(unit);
+            
+            if (seekMode == SeekMode.TRACK_NR) {
+            	this.backendInstance.seekTrack(Long.valueOf(target).longValue());
+            } else {
+            	throw new AVTransportException(AVTransportErrorCode.SEEKMODE_NOT_SUPPORTED, "Unsupported seek mode: " + unit);
+            }
+            
+        } catch (IllegalArgumentException e) {
+            throw new AVTransportException(AVTransportErrorCode.SEEKMODE_NOT_SUPPORTED, "Unsupported seek mode: " + unit);
+        }
         
 		/*
 		 * AVTransport:3 — Standardized DCP (SDCP) – March 31, 2013 38

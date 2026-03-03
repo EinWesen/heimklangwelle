@@ -50,6 +50,7 @@ import de.einwesen.heimklangwelle.renderers.AbstractRendererWrapper;
 import de.einwesen.heimklangwelle.renderers.RendererChangeEventListener;
 import de.einwesen.heimklangwelle.renderers.RendererConnectionManagerServiceImpl;
 import de.einwesen.heimklangwelle.renderers.SingleInstanceAVTransportServiceImpl;
+import de.einwesen.heimklangwelle.renderers.SingleInstancePlaylistServiceImpl;
 import de.einwesen.heimklangwelle.renderers.SingleInstanceRenderingControlServiceImpl;
 import de.einwesen.heimklangwelle.upnpsupport.FilteredAnnotationLocalServiceBinderImpl;
 import de.einwesen.heimklangwelle.upnpsupport.UpnpServiceRegistry;
@@ -136,7 +137,13 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         				new AVTransportLastChangeParser());
         
         avService.setManager(avServiceManager);
-
+        
+        // Our custom servive for playlist management
+        @SuppressWarnings("unchecked")        
+        final LocalService<SingleInstancePlaylistServiceImpl> plService = annotationBinder.read(SingleInstancePlaylistServiceImpl.class);
+        final ServiceManager<SingleInstancePlaylistServiceImpl> plServiceManager = new DefaultServiceManager<SingleInstancePlaylistServiceImpl>(plService, SingleInstancePlaylistServiceImpl.class);
+        plService.setManager(plServiceManager);
+        
         Icon icon = null; // optional, you can provide a PNG icon for the device
 
         LocalDevice device = new LocalDevice(
@@ -144,7 +151,7 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
                 type,
                 details,
                 new Icon[]{icon},
-                new LocalService[]{cmService, rcService, avService}
+                new LocalService[]{cmService, rcService, avService, plService}
         );
         this.upnpService.getRegistry().addDevice(device);
         return device;

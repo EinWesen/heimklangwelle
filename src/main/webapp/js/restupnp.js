@@ -103,11 +103,15 @@ export async function callServiceAction(udn, callOptions) {
 		
 }
 
-
-
 export function createRendererEventSubcription(udn, instanceId, eventHandler) {
     const es = new EventSource(`${BASE_REST_URL}/renderer/${udn}/subscribe`);
     es.addEventListener('LastChange', eventHandler);
 	es.addEventListener('RelativeTimePosition', eventHandler);
     return es; // Return the EventSource in case the caller wants to close it later
+}
+
+
+// Starting from here, these are functions vendor-specific for HeimklangWelle 
+export function fetchCurrentPlaylist(udn, instanceId) {
+	return apiFetch(`${BASE_REST_URL}/renderer/${udn}/playlist/?InstanceId=${instanceId}`);
 }

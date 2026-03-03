@@ -15,10 +15,13 @@ import java.util.concurrent.TimeoutException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.jupnp.model.action.ActionException;
 import org.jupnp.model.types.ErrorCode;
 import org.jupnp.support.avtransport.AVTransportErrorCode;
 import org.jupnp.support.avtransport.AVTransportException;
+import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.Channel;
+import org.jupnp.support.model.DIDLContent;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.renderingcontrol.RenderingControlException;
 import org.slf4j.Logger;
@@ -103,6 +106,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     private volatile long currentTrackTimePos = 0;       
     private volatile long playlistSize = 0;
     private volatile List<String> currentPlaylistMetaData = Collections.synchronizedList(new ArrayList<>());
+    private volatile boolean isPlaylistWriteable = false;
     
     private volatile String version = this.getClass().getName();
     
@@ -225,6 +229,13 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	private void sendCommandElseThrowTransportException(Object[] command) throws AVTransportException {
 		sendCommandElseThrowTransportException(command, AVTransportErrorCode.TRANSPORT_LOCKED);
 	}
+	
+    private void sendCommandElseThrowActionException(Object[] command, ErrorCode errorCode) throws ActionException {
+		if (!sendCommand(command)) {
+			throw new ActionException(errorCode);
+		}				
+	}
+	
     
     private void ipcError(ExecutionException e) {
     	LOGGER.warn("Error in IPC", e);
@@ -261,7 +272,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	    		break;
 	    	case PLAYBACK_RESTART:
 	    		// Fires when a track is loaded during pause, but does not start play
-	    		if (this.playerState != TransportState.PAUSED_PLAYBACK) {
+	    		if (!this.isPaused) {
 	    			this.setPlayerStateAndFire(TransportState.PLAYING);	    			
 	    		}
 	    		break;
@@ -280,7 +291,13 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 				if (this.playerState != TransportState.NO_MEDIA_PRESENT) {
 					this.currentTrack = 0;
 					this.playerState = TransportState.STOPPED;
-					this.firePlayerStateChangedEvent();					
+					this.firePlayerStateChangedEvent();
+					
+					// We want to keep the playlist, so lets just readd everything
+					if (DATAURI_DYNAMIC_PLAYLIST.equals(this.currentTransportURI) && this.isPlaylistWriteable) {
+						this.addAVTransportURIsFromMetaData();
+					}
+					
 				}
 				break;
 			case PROPERTY_CHANGE:
@@ -317,6 +334,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 						break;
 					case PLAYLIST_POS:
 						this.currentTrack =  event.getLong("data") + 1;
+						this.firePlayerStateChangedEvent();
 						break;
 					case PLAYLIST_ITEM_PATH: {						
 						final String trackUri = event.optString("data", ""); 
@@ -331,9 +349,14 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 							} else {
 								this.currentTrackURIMetaData = generateSubTrackMetaData();
 							}
+							
+							if (this.playerState == TransportState.TRANSITIONING) {
+								this.setPlayerStateAndFire(TransportState.STOPPED);
+							}
 						} else {
 							this.currentTrackURI = null;
 							this.currentTrackURIMetaData = null;
+							
 						}
 						break;
 					}
@@ -418,33 +441,30 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
     }
         
     @Override
-    public void loadCurrentContentMetaData() {
+    public boolean loadCurrentContentMetaData() {
     	this.currentPlaylistMetaData.clear();
     	this.currentTrackTimePos = 0;
+    	this.isPlaylistWriteable = false;
+    	this.playlistSize = 0;
+    	this.currentTrack = 1;
     	
     	final String u = getCurrentTransportURI();
     	LOGGER.debug(u);
 
-		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
+    	if (DATAURI_DYNAMIC_PLAYLIST.equals(u)) {
+    		this.isPlaylistWriteable = true;
+    		this.currentTrack = 0;
+    	} else if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
 			this.currentPlaylistMetaData.addAll(parseSubTrackMetaData(u));
 			this.playlistSize = this.currentPlaylistMetaData.size();
 		} else {
-			this.playlistSize = 1;				
+			this.currentPlaylistMetaData.add(getCurrentTransportURIMetaData());
+			this.playlistSize = 1;
 		}
+    	
+    	return true;
     }
 	
-    public void loadCurrentContent() throws AVTransportException {
-
-    	final String u = getCurrentTransportURI();
-		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
-			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-		} else {
-			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-		}
-		
-		this.firePlayerStateChangedEvent();
-	}    
-    	
 	@Override
 	public void setMute(Channel channel, boolean desiredMute) throws RenderingControlException {
 		synchronized (this.mpv) {
@@ -501,14 +521,25 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	
 	@Override
 	public void play() throws AVTransportException {
-    	if (this.playerState != TransportState.PAUSED_PLAYBACK) {
-    		final String u = getCurrentTransportURI();
-    		if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
-    			sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-    		} else {
-    			sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
-    		}    		
-    	}
+		final String u = getCurrentTransportURI();
+    	
+		if (DATAURI_DYNAMIC_PLAYLIST.equals(u)) {
+			if(this.playlistSize == 0) {
+				throw new AVTransportException(AVTransportErrorCode.NO_CONTENTS);
+			}
+		} else {
+
+			if (this.playerState != TransportState.PAUSED_PLAYBACK) {				
+				
+				if (u.toLowerCase().endsWith(".m3u") || u.toLowerCase().endsWith(".m3u8")) {
+					sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+				} else {
+					sendCommandElseThrowTransportException(new Object[]{"loadfile", u, "replace"}, AVTransportErrorCode.READ_ERROR);
+				}
+				
+			}
+			
+		}
 		
 		if (this.isPaused) {
 			sendCommandElseThrowTransportException(new Object[]{CMD_SET_PROPERTY, "pause", Boolean.FALSE});			
@@ -524,6 +555,11 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	public void stop() throws AVTransportException {
 		sendCommandElseThrowTransportException(new Object[]{"stop"});
 	}
+	
+	@Override
+	public void seekTrack(long trackNo) throws AVTransportException {
+		sendCommandElseThrowTransportException(new Object[]{"playlist-play-index", trackNo-1}, AVTransportErrorCode.ILLEGAL_SEEK_TARGET);		
+	}	
 	
 	@Override
 	public boolean isMute(Channel channel) throws RenderingControlException {
@@ -555,4 +591,133 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 		return this.currentTrackTimePos;
 	}
 
+	@Override
+	public void ejectMedia() throws AVTransportException {
+		if (this.playerState == TransportState.PLAYING || this.playerState == TransportState.PAUSED_PLAYBACK) {
+			this.stop();
+		}		
+		sendCommandElseThrowTransportException(new Object[]{"playlist-clear"}, AVTransportErrorCode.CONTENT_BUSY);
+		sendCommandElseThrowTransportException(new Object[]{CMD_SET_PROPERTY, "pause", Boolean.TRUE});
+		this.playlistSize = 0;
+		this.currentPlaylistMetaData.clear();
+		this.currentTrackTimePos = 0;
+		super.ejectMedia();
+	}
+
+	@Override
+	public void addAVTransportURI(String nextURI, String nextURIMetaData) throws AVTransportException {
+		if (this.isPlaylistWriteable) {
+
+			if (nextURI.toLowerCase().endsWith(".m3u") || nextURI.toLowerCase().endsWith(".m3u8")) {
+				// We do not support adding full lists for now
+				
+				//sendCommandElseThrowTransportException(new Object[]{"loadlist", u, "append"}, AVTransportErrorCode.READ_ERROR);
+				throw new AVTransportException(AVTransportErrorCode.PLAYBACK_FORMAT_NOT_SUPPORTED);
+			} else {
+				synchronized (this.currentPlaylistMetaData) {
+					this.currentPlaylistMetaData.add(nextURIMetaData);
+					try {
+						sendCommandElseThrowTransportException(new Object[]{"loadfile", nextURI, "append"}, AVTransportErrorCode.READ_ERROR);
+					} catch (AVTransportException e) {
+						this.currentPlaylistMetaData.remove(this.currentPlaylistMetaData.size()-1);
+						throw e;
+					}				
+				}
+			}
+			
+		} else {
+			throw new AVTransportException(AVTransportErrorCode.MEDIA_PROTECTED);
+		}
+		
+	}
+	
+
+		
+	@Override
+	public List<String> getTrackURIsMetaData() throws ActionException {
+		return new ArrayList<>(this.currentPlaylistMetaData);
+	}
+	
+	private void addAVTransportURIsFromMetaData() {
+		
+		final MPVRendererWrapper self = this;
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				final DIDLParser parser = new DIDLParser(); 
+				
+				try {
+					for (String metaData : self.currentPlaylistMetaData) {
+						final DIDLContent content = parser.parse(metaData);
+						final String url = content.getItems().get(0).getResources().get(0).getValue();
+						sendCommandElseThrowTransportException(new Object[]{"loadfile", url, "append"}, AVTransportErrorCode.READ_ERROR);
+					}
+				} catch (Exception e) {
+					LOGGER.warn("Internal error", e);
+					try {
+						self.setCurrentContent("", "");
+					} catch (AVTransportException e1) {
+						LOGGER.warn("Internal error", e1);
+					}
+					self.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);
+				}
+			}
+		}).start();
+	}
+		
+	@Override
+	public void removeTrackAtIndex(long index) throws ActionException {
+		sendCommandElseThrowActionException(new Object[] {"playlist-remove", index}, ErrorCode.ACTION_FAILED);
+		this.currentPlaylistMetaData.remove((int)index);
+		
+		if ((index + 1) < this.currentTrack) {
+			this.currentTrack -= 1;				
+		}
+		
+		// MPV fires an event it seems
+		//this.playlistSize -= 1; 		
+		//this.firePlayerStateChangedEvent();
+		
+	}
+
+	@Override
+	public void moveTrackAtIndex(long index, long toIndex) throws ActionException {
+		/* playlist-move <index1> <index2>
+		 * 
+		 * Move the playlist entry at index1, so that it takes the place of the entry index2.
+		 * (Paradoxically, the moved playlist entry will not have the index value index2 after moving
+		 * if index1 was lower than index2, because index2 refers to the target entry, not the index the entry will have after moving.)
+		 * 
+		 * => Meaning:
+		 * The moved entry is placed before index2 
+		 */
+				
+		// The value may changed after command (at leats when being teh current track) 
+		final long trackBeforeMove = this.currentTrack;
+		
+		if (index > toIndex) {
+			sendCommandElseThrowActionException(new Object[] {"playlist-move", index, toIndex}, ErrorCode.ACTION_FAILED);			
+		} else {
+			// +1 because its an actual move, and weed to set it after, just like teh dom
+			sendCommandElseThrowActionException(new Object[] {"playlist-move", index, toIndex + 1}, ErrorCode.ACTION_FAILED);
+		}
+		
+		// Update metadata, this works as it is, because we rmeove the index first
+		final String prevValue = this.currentPlaylistMetaData.remove((int)index);		
+		this.currentPlaylistMetaData.add((int)toIndex, prevValue);
+
+		// NOt update the current track, mpv send an event only when its teh current
+		if ((index + 1) == trackBeforeMove ) {
+			this.currentTrack = toIndex + 1;
+			this.firePlayerStateChangedEvent();	
+		} else if ((index + 1) < trackBeforeMove && (toIndex + 1) > trackBeforeMove) {
+			this.currentTrack = trackBeforeMove - 1;
+			this.firePlayerStateChangedEvent();	
+		} else if ((index + 1) > trackBeforeMove && (toIndex + 1) <= trackBeforeMove) {
+			this.currentTrack = trackBeforeMove + 1;
+			this.firePlayerStateChangedEvent();	
+		}
+		
+	}		
+	
 }

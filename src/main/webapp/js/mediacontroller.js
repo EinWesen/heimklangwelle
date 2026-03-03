@@ -1,4 +1,4 @@
-import { DefaultRemoteRenderer } from "./renderer.js";
+import { DefaultRemoteRenderer,HeimklangRemoteRenderer } from "./renderer.js";
 
 export class RelTimeHandler { 
   constructor(timeElement) {
@@ -192,7 +192,7 @@ export class MediaController {
 		if (li != null) {
 			const span = event.target.closest('span.remove');
 			if (span != null) {
-				this._removePlaylistListItem(li);
+				this._removePlaylistListItem(li).catch(already_reported => true);
 			} else {
 		   	   this._containerElement.dispatchEvent(
 			   		new CustomEvent(MediaController.EVENT_NAME_PLAYLIST_DBLCLICK, {detail: { 
@@ -233,7 +233,13 @@ export class MediaController {
 		
   }
   
-  async selectDevice(udn, instanceId) {
+  async selectDevice(udn, instanceId, rendererType) {
+	if (rendererType === 'H') {
+		this._renderer = new HeimklangRemoteRenderer();		
+	} else { // 'D'
+		this._renderer = new DefaultRemoteRenderer();		
+	}
+	
     this._renderer.deviceUdn = udn;
 	this._renderer.instanceId = instanceId;
 	this._userstop = false; 
@@ -258,9 +264,9 @@ export class MediaController {
 	}
 	this._remotePropertyChanged();
 	
-	this._updateLocalPlaylistItems(await this._renderer.getInitialPlaylist()); 
 	
 	if (udn) {
+		this._updateLocalPlaylistItems(await this._renderer.getInitialPlaylist()); 
 		this._eventSource =  this._renderer.createRendererEventSubcription((event) => {
 			
 			if (event.type == 'LastChange') {
@@ -333,6 +339,8 @@ export class MediaController {
 	        this._eventSource.close();
 			this._triggerActionError("Disconnected from remote event source").catch((ignore) => 'ERROR already reported');
 	    }			
+	} else {
+		this._updateLocalPlaylistItems(undefined);
 	}
 	
   }  
@@ -386,17 +394,26 @@ export class MediaController {
 	  // Mark current track in playlist, if possible		
 	  if (this._playlist && this._playlist.length > 0) {
 	  	
-		if (transportUri != this._currentPlaylistItemUrl) {
-	  		this._currentPlaylistItemUrl = transportUri;		
-	  		const playlistNodes = this._playlistContainerElement.children;
-	  		for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
-	  			if (this._playlist[itemIndex].uri == transportUri ) {
-	  				playlistNodes[itemIndex].classList.add("active");				
-	  			} else {
-	  				playlistNodes[itemIndex].classList.remove("active");
-	  			}
-	  		} 		
-	  	}	
+		let compareUri = this._properties['AVTransportURI'];
+		
+		if (this._renderer.playlistType==DefaultRemoteRenderer.PLAYLIST_TYPE_REMOTE) {
+			if (this._properties['CurrentTrackURI'] != '') { // just to be sure
+				compareUri = this._properties['CurrentTrackURI'];
+			}
+		}
+
+		if (compareUri != this._currentPlaylistItemUrl) {
+			this._currentPlaylistItemUrl = compareUri;		
+		  	const playlistNodes = this._playlistContainerElement.children;
+		  	for (let itemIndex = 0; itemIndex < playlistNodes.length; itemIndex++) {
+		  		if (this._playlist[itemIndex].uri == this._currentPlaylistItemUrl ) {
+		  			playlistNodes[itemIndex].classList.add("active");				
+		  		} else {
+		  			playlistNodes[itemIndex].classList.remove("active");
+		  		}
+		  	} 		
+		}
+	
 			
 	  } else {
 	  	this._currentPlaylistItemUrl = '';
@@ -453,7 +470,11 @@ export class MediaController {
   
   _updateLocalPlaylistItems(plData) {
 	if (plData != undefined) {
-		console.error("setPlayList", plData);
+				
+		for (let i=0; i < plData.length; i++) {
+			this._playlistContainerElement.appendChild(createPlaylistLi(plData[i], i));
+		}
+		 		
 	} else {
 		return this._emptyLocalPlaylist();
 	}
@@ -485,8 +506,7 @@ export class MediaController {
 	}
 		
 	try {
-		await this._renderer.addToPlaylist(item, replace);
-		
+		await this._renderer.addToPlaylist(item, replace);		
 		const index = this._playlist.push(item) - 1;
 		this._playlistContainerElement.appendChild(createPlaylistLi(item, index));
 		return index;		

@@ -23,10 +23,12 @@ import org.jupnp.model.gena.GENASubscription;
 import org.jupnp.model.meta.Device;
 import org.jupnp.model.meta.Service;
 import org.jupnp.model.types.UDAServiceType;
+import org.jupnp.support.model.DIDLContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.einwesen.heimklangwelle.HeimklangServiceRegistry;
+import de.einwesen.heimklangwelle.controller.GetPlaylistCallbackFuture;
 import de.einwesen.heimklangwelle.controller.GetPositionInfoCallbackFuture;
 import de.einwesen.heimklangwelle.controller.RendererSubscriptionPublisherCallback;
 
@@ -42,6 +44,8 @@ public class RendererEndpointServlet extends HttpServlet {
 			_doStreamEventSubscription(req, resp);
 		} else if (req.getPathInfo().endsWith("/actions") || req.getPathInfo().endsWith("/actions/")) {
 			_doGetActions(req, resp);	        
+		} else if (req.getPathInfo().endsWith("/playlist") || req.getPathInfo().endsWith("/playlist/")) {
+			_doGetPlaylist(req, resp);
 		} else {
 			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "action does not exists");
 		}
@@ -214,6 +218,52 @@ public class RendererEndpointServlet extends HttpServlet {
 		resp.setStatus(HttpServletResponse.SC_OK);
 		Utils.sendJSON(jsonResponse, resp);		
 	}	
+	
+	protected void _doGetPlaylist(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+		
+		final int instanceId;
+		try {
+			instanceId = Integer.parseInt(req.getParameter("InstanceId"));			
+		} catch (NumberFormatException nf) {
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "bad InstanceId");
+			return;
+		}
+		
+		
+		@SuppressWarnings("rawtypes")
+		final Device device = Utils.getDeviceOrFail(req, resp);
+		
+		if (device == null) {		
+			return;
+		}
+		
+        @SuppressWarnings("rawtypes")
+		final Service playlistMgmt = device.findService(new UDAServiceType("HeimklangPlaylistManagement"));
+
+        if (playlistMgmt == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Service not found on device");
+            return;
+        }    		
+		
+ 		final GetPlaylistCallbackFuture metaCallback = new GetPlaylistCallbackFuture(playlistMgmt, instanceId);
+		
+ 		try {
+			final DIDLContent didlContent =  HeimklangServiceRegistry.getInstance().execute(metaCallback).get(30, TimeUnit.SECONDS);
+			
+			// If we don't get a playlist comtainer, then something wrong
+			if (didlContent.getContainers().size() == 1) {
+				final JSONObject jsonResult = Utils.getJSONContainer(didlContent.getContainers().get(0));
+				Utils.sendJSON(jsonResult, resp);				
+			} else {
+	            resp.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Response did not match expectations");
+			}
+			
+		} catch (Throwable e) {
+			LOGGER.error("", e);
+			Utils.sendException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e, resp);
+		}
+				
+	}
 	
 
 }

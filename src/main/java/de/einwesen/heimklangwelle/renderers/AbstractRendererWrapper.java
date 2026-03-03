@@ -16,7 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.jupnp.model.action.ActionException;
 import org.jupnp.model.types.UnsignedIntegerFourBytes;
+import org.jupnp.support.avtransport.AVTransportErrorCode;
 import org.jupnp.support.avtransport.AVTransportException;
 import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.Channel;
@@ -31,6 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractRendererWrapper {
+	public static final String DATAURI_DYNAMIC_PLAYLIST = "data:audio/mpegurl;#EXTM3U";
+	
 	private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRendererWrapper.class);
 	
 	protected UnsignedIntegerFourBytes instanceId = new UnsignedIntegerFourBytes(0);
@@ -162,12 +166,17 @@ public abstract class AbstractRendererWrapper {
 	}	
 	
 	public void setCurrentContent(String currentURI, String currentURIMetaData) throws AVTransportException {
-		if (this.playerState == TransportState.PLAYING) {
+		if (this.playerState == TransportState.PLAYING || this.playerState == TransportState.PAUSED_PLAYBACK) {
 			this.stop();
 		}
 		
-		this.currentTrackURI = "";
-		this.currentTrackURIMetaData = "";
+    	if (DATAURI_DYNAMIC_PLAYLIST.equals(currentURI)) {
+    		this.ejectMedia();
+    	} else {    		
+    		this.currentTrackURI = "";
+    		this.currentTrackURIMetaData = "";
+    		this.currentTrack = 0;
+    	}
 
 		if (currentURIMetaData != null) {
 			this.currentTransportURIMetaData = currentURIMetaData;			
@@ -177,11 +186,14 @@ public abstract class AbstractRendererWrapper {
 		
 		if (currentURI != null) {
 			this.currentTransportURI = currentURI;
-			this.currentTrack = 1;
 			
 			// State is wrong if this fails
-			this.loadCurrentContentMetaData();
+			boolean loaded = this.loadCurrentContentMetaData();
 			setPlayerStateAndFire(TransportState.STOPPED);
+			
+			if (!loaded) {
+				throw new AVTransportException(AVTransportErrorCode.PLAYBACK_FORMAT_NOT_SUPPORTED);
+			}
 		} else {
 			this.currentTransportURI = "";
 		}		
@@ -324,7 +336,32 @@ public abstract class AbstractRendererWrapper {
 		return result;		
 	}
 	
-	public abstract void loadCurrentContentMetaData() throws AVTransportException;
+	public void ejectMedia() throws AVTransportException {
+		this.currentTransportURI = "";
+		this.currentTransportURIMetaData = "";
+		this.currentTrackURI = "";
+		this.currentTrackURIMetaData = "";
+		this.currentTrack = 0;
+		this.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);		
+	}
+	
+	public void seekTrack(long trackNo) throws AVTransportException {
+		long current = this.getCurrentTrack();
+		
+		if (current == trackNo) return;
+		
+		while (current > trackNo) {
+			this.previousTrack();
+			current -= 1;
+		}
+
+		while (current < trackNo) {
+			this.nextTrack();
+			current += 1;
+		}
+	}
+
+	public abstract boolean loadCurrentContentMetaData() throws AVTransportException;
 	public abstract boolean isMute(Channel channel) throws RenderingControlException;
 	public abstract void setMute(Channel channel, boolean desiredMute)  throws RenderingControlException;
 	public abstract void setVolume(Channel channel, long desiredVolume) throws RenderingControlException;
@@ -339,5 +376,9 @@ public abstract class AbstractRendererWrapper {
 	public abstract long getCurrentTrack() throws AVTransportException;
 	public abstract long getCurrentTrackPosition() throws AVTransportException;
 	
+	public abstract List<String> getTrackURIsMetaData() throws ActionException;
+	public abstract void addAVTransportURI(String currentURI, String currentURIMetaData) throws ActionException;
+	public abstract void removeTrackAtIndex(long index) throws ActionException;
+	public abstract void moveTrackAtIndex(long index, long toIndex) throws ActionException;
 	
 }
