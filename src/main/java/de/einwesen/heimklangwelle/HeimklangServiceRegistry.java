@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -25,6 +27,7 @@ import org.jupnp.model.meta.LocalDevice;
 import org.jupnp.model.meta.LocalService;
 import org.jupnp.model.meta.ManufacturerDetails;
 import org.jupnp.model.meta.ModelDetails;
+import org.jupnp.model.resource.IconResource;
 import org.jupnp.model.types.DeviceType;
 import org.jupnp.model.types.UDADeviceType;
 import org.jupnp.model.types.UDN;
@@ -150,13 +153,11 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         final ServiceManager<SingleInstancePlaylistServiceImpl> plServiceManager = new DefaultServiceManager<SingleInstancePlaylistServiceImpl>(plService, SingleInstancePlaylistServiceImpl.class);
         plService.setManager(plServiceManager);
         
-        Icon icon = null; // optional, you can provide a PNG icon for the device
-
         LocalDevice device = new LocalDevice(
                 identity,
                 type,
                 details,
-                new Icon[]{icon},
+                getIcons("icon_mediarenderer"),
                 new LocalService[]{cmService, rcService, avService, plService}
         );
         this.upnpService.getRegistry().addDevice(device);
@@ -230,14 +231,12 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         @SuppressWarnings("unchecked")
 		final LocalService<ContentDirectoryServiceImpl> contentService = annotationBinder.read(ContentDirectoryServiceImpl.class);
         contentService.setManager(new DefaultServiceManager<>(contentService, ContentDirectoryServiceImpl.class));
-
-        Icon icon = null; // optional, you can provide a PNG icon for the device
-
+        
         LocalDevice device = new LocalDevice(
                 identity,
                 type,
                 details,
-                new Icon[]{icon},
+                getIcons("icon_mediaserver"),
                 new LocalService[]{cmService, contentService}
         );
         this.upnpService.getRegistry().addDevice(device);
@@ -333,4 +332,35 @@ public class HeimklangServiceRegistry extends UpnpServiceRegistry {
         return hostname;		
 	}
 	
+	private IconResource getIconResource(String basename, int size) {
+	    
+		try {
+			final String filename = basename + "_" + size + ".png";
+			final URL resourceURl = HeimklangStation.class.getResource("/resources/icons/"+filename);
+			final IconResource res =  new IconResource(new URI(resourceURl.toExternalForm()), new Icon("image/png", size, size, 32, resourceURl));
+			this.upnpService.getRegistry().addResource(res);
+			return res;
+		} catch (Throwable e) {
+			LOGGER.debug("Could not get icon", e);
+			return null;
+		}
+	}
+	
+	private Icon[] getIcons(String basename) {
+		final ArrayList<Icon> icons = new ArrayList<>(3);
+		
+		for (int size : new int[] {128,64,48}) {
+			final IconResource ir = getIconResource(basename, size);
+			if (ir != null) {
+				icons.add(ir.getModel());
+			}
+		}		
+		
+		if (icons.size() == 0) {
+			return new Icon[] {null};
+		} else {
+			return icons.toArray(new Icon[icons.size()]);			
+		}
+		
+	}
 }

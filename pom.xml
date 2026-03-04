@@ -2,6 +2,13 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+	
+	<pluginRepositories>
+	    <pluginRepository>
+	        <id>svg-maven-plugin-repository</id>
+	        <url>https://raw.github.com/uphy/svg-maven-plugin/mvn-repo/</url>
+	    </pluginRepository>
+	</pluginRepositories>	
 
 	<groupId>de.einwesen.heimklangwelle</groupId>
 	<artifactId>heimklang-station</artifactId>
@@ -18,6 +25,10 @@
 	<build>
 		<finalName>${project.artifactId}</finalName>
 		  <resources>
+			  <resource>
+			    <directory>${project.build.directory}/generated-resources</directory>
+			    <filtering>false</filtering>
+			  </resource>		  
 		    <resource>
 		      <directory>src/main/webapp</directory>
 		      <targetPath>/webapp</targetPath>
@@ -40,8 +51,125 @@
 		      <directory>src/test/resources</directory>
 		      <targetPath></targetPath>		      
 		    </testResource>
+			  <testResource>
+			    <directory>${project.build.directory}/generated-resources</directory>
+			    <filtering>false</filtering>
+			  </testResource>			    
 		  </testResources>		
-		<plugins>
+		<plugins>		
+			  <plugin>
+			     <groupId>jp.uphy.maven</groupId>
+				 <artifactId>svg-maven-plugin</artifactId>
+				 <version>1.1</version>
+		    	 <executions>
+				 	<execution>
+				    	<id>RasterizeMediaServer</id>
+				        <phase>generate-resources</phase>
+				        <goals>
+				        	<goal>rasterize</goal>
+				         </goals>
+				         <configuration>
+						 	<input>${project.basedir}/src/main/resources/icon_mediaserver.svg</input>
+							<outputs>
+								<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons/icon_mediaserver_48.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>48</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>48</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+								<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons/icon_mediaserver_64.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>64</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>64</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+							   	<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons//icon_mediaserver_128.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>128</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>128</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+							</outputs>
+				         </configuration>
+				    </execution>
+				 	<execution>
+				    	<id>RasterizeMediaRenderer</id>
+				        <phase>generate-resources</phase>
+				        <goals>
+				        	<goal>rasterize</goal>
+				         </goals>
+				         <configuration>
+						 	<input>${project.basedir}/src/main/resources/icon_mediarenderer.svg</input>
+							<outputs>
+								<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons/icon_mediarenderer_48.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>48</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>48</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+								<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons/icon_mediarenderer_64.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>64</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>64</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+							   	<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/resources/icons/icon_mediarenderer_128.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>128</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>128</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+							</outputs>
+				         </configuration>
+				    </execution>
+				 	<execution>
+				    	<id>RasterizeMediaController</id>
+				        <phase>generate-resources</phase>
+				        <goals>
+				        	<goal>rasterize</goal>
+				         </goals>
+				         <configuration>
+						 	<input>${project.basedir}/src/main/resources/icon_mediacontroller.svg</input>
+							<outputs>
+								<output>
+							    	<!-- Output file path. [Required] -->
+							        <path>${project.build.directory}/generated-resources/webapp/favicon.png</path>
+							        <!-- Maximum width of output image. [Required] -->
+							        <width>32</width>
+							        <!-- Maximum height of output image. [Required] -->
+							        <height>32</height>
+							        <!-- Format for output image(png, jpg, pdf, tiff). [Optional, default:png] -->
+							        <format>png</format>
+							   	</output>
+							</outputs>
+				         </configuration>
+				    </execution>				    		    
+				 </executions>
+			  </plugin>				
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
@@ -71,6 +199,10 @@
 					<outputDirectory>${project.build.directory}/dist</outputDirectory>
 					<excludes>
 						<exclude>**/logback.xml</exclude>
+						<!-- I would want *.svg, but it does not work and i spent way more time on this already than i would want -->
+						<exclude>**/icon_mediacontroller.svg</exclude>
+						<exclude>**/icon_mediaserver.svg</exclude>
+						<exclude>**/icon_mediarenderer.svg</exclude>
 					</excludes>					
 					<archive>
 						<manifest>
@@ -150,6 +282,7 @@
 	        </executions>
 	      </plugin>			
 		</plugins>
+		
 	</build>
 
 

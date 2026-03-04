@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="mediarenderer.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.5761719"
+     inkscape:cx="256.31722"
+     inkscape:cy="256"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <circle
+     cx="256"
+     cy="256"
+     r="256"
+     fill="#F26419"
+     id="circle1"
+     style="fill:#0066cc;fill-opacity:1" />
+  <g
+     id="g4"
+     transform="matrix(1.0610276,0,0,1.1291029,-56.574529,-34.002016)">
+    <path
+       d="m 106.34449,259.36555 q 50,-60 100,0 50,60 100,0"
+       fill="none"
+       stroke="#ffffff"
+       stroke-width="22"
+       stroke-linecap="round"
+       id="path1" />
+    <path
+       d="m 300,200 80,-30 v 172 l -80,-30 z"
+       fill="#ffffff"
+       id="path2" />
+    <path
+       d="m 410,220 q 40,36 0,72"
+       fill="none"
+       stroke="#ffffff"
+       stroke-width="20"
+       stroke-linecap="round"
+       id="path3" />
+    <path
+       d="m 440,200 q 60,56 0,112"
+       fill="none"
+       stroke="#ffffff"
+       stroke-width="20"
+       stroke-linecap="round"
+       id="path4" />
+  </g>
+  <g
+     id="g5"
+     transform="matrix(1.2221918,0,0,1.2133056,-15.570888,-235.89016)">
+    <path
+       d="m 238.60994,404.66466 24.20875,-24.46592 24.20874,24.46592"
+       fill="none"
+       stroke="#b5b5b5"
+       stroke-width="5.95457"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path1-8" />
+    <rect
+       x="245.67365"
+       y="400.01321"
+       width="34.290096"
+       height="27.645842"
+       rx="3.9188681"
+       fill="none"
+       stroke="#b5b5b5"
+       stroke-width="5.95457"
+       id="rect1" />
+    <path
+       d="m 256.43018,411.69376 q 6.14206,-7.94052 12.28412,0"
+       fill="none"
+       stroke="#b5b5b5"
+       stroke-width="3.15488"
+       stroke-linecap="round"
+       id="path3-9" />
+    <path
+       d="m 256.41982,419.99353 q 6.14207,-7.94052 12.28413,0"
+       fill="none"
+       stroke="#b5b5b5"
+       stroke-width="3.15488"
+       stroke-linecap="round"
+       id="path3-9-8" />
+  </g>
+  <!-- Incoming wave -->
+  <!-- Speaker body -->
+  <!-- Sound waves -->
+</svg>
