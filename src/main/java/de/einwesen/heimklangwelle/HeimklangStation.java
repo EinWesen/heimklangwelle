@@ -12,6 +12,10 @@ import de.einwesen.heimklangwelle.renderers.DummyWrapperImpl;
 import de.einwesen.heimklangwelle.renderers.MPVRendererWrapper;
 
 public class HeimklangStation {
+	public static final String CONFIG_PROPERTY_NORENDERER = "HEIMKLANG_CONFIG_NORENDERER";
+	public static final String CONFIG_PROPERTY_NOSERVER = "HEIMKLANG_CONFIG_NOSERVER";
+	public static final String CONFIG_PROPERTY_NOCONTROLLER = "HEIMKLANG_CONFIG_NOCONTROLLER";
+
 	private final static Logger LOGGER = LoggerFactory.getLogger(HeimklangStation.class);
 	
 	private static HeimklangStation instance = null;
@@ -23,15 +27,25 @@ public class HeimklangStation {
         if (instance == null) {
         	instance = this;
         	
-        	LOGGER.info("Initializing renderer...");
-        	this.rendererInstance = initRenderer();        	
-            
         	LOGGER.info("Initializing service registry...");
         	this.serviceRegistry = HeimklangServiceRegistry.getInstance();
         	this.serviceRegistry.startup();
-            this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);
-            this.serviceRegistry.registerLocalContentServerDevice();
-            this.serviceRegistry.registerLocalController();
+        	
+        	if (!Boolean.valueOf(getConfigProperty(CONFIG_PROPERTY_NORENDERER, "false"))) {
+        		LOGGER.info("Initializing renderer...");
+        		this.rendererInstance = initRenderer();        	
+        		this.serviceRegistry.registerLocalRendererDevice(this.rendererInstance);        		
+        	} else {
+        		this.rendererInstance = null;
+        	}
+        	
+        	if (!Boolean.valueOf(getConfigProperty(CONFIG_PROPERTY_NOSERVER, "false"))) {
+        		this.serviceRegistry.registerLocalContentServerDevice();        		
+        	}
+        	
+        	if (!Boolean.valueOf(getConfigProperty(CONFIG_PROPERTY_NOCONTROLLER, "false"))) {
+        		this.serviceRegistry.registerLocalController();        		
+        	}        	
             
         } else {
         	throw new IllegalStateException("There may only be one serviceInstance");
@@ -52,7 +66,9 @@ public class HeimklangStation {
     }
     
     public void shutdown() {
-    	this.rendererInstance.shutdown();
+    	if (this.rendererInstance != null) {
+    		this.rendererInstance.shutdown();    		
+    	}
         this.serviceRegistry.shutdown();
     }
         
