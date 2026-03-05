@@ -52,7 +52,7 @@ Maybe (not). While the current state is totally usable in my opinion, and suppor
 And since this was more of a educational / recreational project and does already more than i need, it is unlikely that it will see much updates.
 I may fix bugs if i find them, but don't expect new features any time soon. In the same way, some dependencies are not even up to date at the time of writing.
 
-But i will do some testing still, before calling it "1.0".
+But i will do some testing still, before calling the current (unreleased) head "1.0".
 
 ## Acknowlegements
 This would not be possible without these: 
