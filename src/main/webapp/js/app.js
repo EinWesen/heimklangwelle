@@ -24,6 +24,7 @@ const MEDIACONTROLLER = new MediaController({
 	'playlist-container': 'playlist-ul',
 	'btn-next-media' : 'btn-next-media',
 	'btn-prev-media' : 'btn-prev-media',
+	'btn-toggle-mute' : 'btn-mute',
 });
 
 function showToast(message, duration = 3000) {

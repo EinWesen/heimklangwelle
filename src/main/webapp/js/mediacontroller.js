@@ -177,8 +177,9 @@ export class MediaController {
 	document.getElementById(options["btn-stop"]).onclick = (event) => this.stop().catch(errorInfo => errorInfo); // Swallow already reported error;;
 	document.getElementById(options["btn-next"]).onclick = (event) => this.next().catch(errorInfo => errorInfo); // Swallow already reported error;;
 	document.getElementById(options["btn-prev"]).onclick = (event) => this.previous().catch(errorInfo => errorInfo); // Swallow already reported error;
-	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia().catch(text => console.log("error", text)); // Swallow already reported error
-	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia().catch(text => text); // Swallow already reported error;	
+	document.getElementById(options["btn-next-media"]).onclick = (event) => this.nextMedia().catch(text => text); // Swallow already reported error
+	document.getElementById(options["btn-prev-media"]).onclick = (event) => this.previousMedia().catch(text => text); // Swallow already reported error;
+	document.getElementById(options["btn-toggle-mute"]).onclick = (event) => this.toggleMute().catch(text => text); // Swallow already reported error;		
 	
 	this._volumeElement.oninput = (event) => {
 	   clearTimeout(this._volDebounceTimer);	
@@ -454,7 +455,7 @@ export class MediaController {
   }
 
   async toggleMute() {	
-	return this._renderer.setMute(this.properties['Mute'] == 'true' ? 'false' : 'true').catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
+	return this._renderer.setMute(this._properties['Mute'] == 'true' ? 'false' : 'true').catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }  
 
   async setAVTransportItem(item) {
