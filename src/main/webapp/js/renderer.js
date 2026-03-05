@@ -225,6 +225,226 @@ export class HeimklangRemoteRenderer extends DefaultRemoteRenderer {
 	
 }
 
+export class LocalBrowserRenderer {
+	constructor() {
+		this.playlistType=DefaultRemoteRenderer.PLAYLIST_TYPE_LOCAL;
+		this.deviceUdn = '-';
+		this.instanceId = 0;
+		
+		this._audioElement = new Audio();
+		this._metadata = '';
+		this._eventHandler = undefined;
+		this._lastTime = 0;
+		this._stopRequest=false;
+		this.onerror='willbeignored';
+		
+		this._audioElement.addEventListener('loadstart', () => {
+		  this.dispatchLastChange({
+			'TransportState': 'TRANSITIONING',
+			'AVTransportURIMetaData': this._metadata,
+			'AVTransportURI': this._audioElement.src,
+			'CurrentTrack': 'NOT_IMPLEMENTED',			
+			'NumberOfTracks': 'NOT_IMPLEMENTED',
+			'RelativeTimePosition': '00:00:00',
+			'CurrentTrackURI': this._audioElement.src,
+			'CurrentTrackMetaData': this._metadata,
+		  });		  
+		});
+		
+		this._audioElement.addEventListener('pause', () => {
+			if (!this._audioElement.paused) {
+				this.dispatchLastChange({
+					'TransportState': this._stopRequest? 'STOPPED':'PAUSED_PLAYBACK',					
+				});							
+				this.stopRequest = false;
+			}
+		});
+		
+		this._audioElement.addEventListener('playing', () => {
+			this.dispatchLastChange({
+				'TransportState': 'PLAYING',
+			});			
+		});		
+
+		this._audioElement.addEventListener('ended', () => {
+			this._lastTime = 0;
+			this.dispatchLastChange({
+				'TransportState': 'STOPPED',
+				'RelativeTimePosition': '00:00:00',
+			});			
+		});				
+		
+		this._audioElement.addEventListener('volumechange', () => {
+			this.dispatchLastChange({
+				'Volume': '' + Math.trunc(this._audioElement.volume * 100),
+				'Mute': '' + this._audioElement.muted
+			});			
+		});			
+
+		this._audioElement.addEventListener('error', () => {
+			this.dispatchLastChange({
+				'TransportState': 'STOPPED',
+				'RelativeTimePosition': '00:00:00',
+			});			
+		});
+		
+		this._audioElement.addEventListener("timeupdate", (event) => { 
+			if (this._eventHandler != undefined) {
+				const ct = this._audioElement.currentTime;
+				if (Math.abs(this._lastTime - ct) > 10) {
+					this._lastTime = ct;
+	
+					const dateObj = new Date(0);
+					dateObj.setSeconds(ct); 					
+					
+					const dummyEvent = {
+						type: 'RelativeTimePosition',
+						data: dateObj.toISOString().substring(11, 19)
+					};
+					this._eventHandler(dummyEvent);				
+				}				
+			}
+		});
+		
+	}
+	
+	dispatchLastChange(data) {
+
+		if (this._eventHandler != undefined) {
+			const dummyEvent = {
+				type: 'LastChange',
+				data: JSON.stringify(data)
+			};
+			this._eventHandler(dummyEvent);			
+		}
+	}
+	
+	 async setAVTransportItem(item) {
+		this._metadata = item.uriMetaData;
+		this._audioElement.src = item.uri;
+		return Promise.resolve({response: undefined, data: ''}); 
+	 }	
+	
+	async play() {
+		return this._audioElement.play()		
+		.then( (_) => { return {response: undefined, data: ''}; })
+		.catch(error => Promise.reject({
+			summary: 'Error playing track:' + error.message,
+			isError: true,
+			error: error,
+			response: undefined,
+			data: ''
+		}));
+	}
+	
+	async pause() {
+		this._audioElement.pause();
+		return Promise.resolve({response: undefined, data: ''});
+	}
+
+	 async stop() {		
+		this._stopRequest=true;
+		this._audioElement.pause();
+		this._audioElement.currentTime = 0;
+		this.dispatchLastChange({
+			'TransportState': 'STOPPED',
+			'RelativeTimePosition': '00:00:00',
+		});	
+	 }
+
+	 async next() {
+		return Promise.reject({
+			summary: 'No next track available',
+			isError: false,
+			error: 0,
+			response: undefined,
+			data: ''
+		});
+	 }
+
+	 async previous() {
+		return Promise.reject({
+			summary: 'No previous track available',
+			isError: false,
+			error: 0,
+			response: undefined,
+			data: ''
+		});
+	 }
+
+	 async setVolume(volAsString) {
+		
+		return new Promise((resolve, reject) => {
+			try {
+				this._audioElement.volume = (parseInt(volAsString)/100);
+				resolve({response: undefined, data: ''});				
+			} catch (error) {
+				reject({
+					summary: 'Could not set volume:' + error.message,
+					isError: true,
+					error: error,
+					response: undefined,
+					data: ''
+				});
+			}
+		});
+	 }
+
+	 async setMute(booleanStr) {	
+		this._audioElement.muted = ('true' == booleanStr);
+		return Promise.resolve({response: undefined, data: ''});	
+	 }  
+	 
+	 async playEntry({itemindex, item}) {
+		return this.setAVTransportItem(item).then((apiResult) => {
+			return this.play();	
+		});
+	 }
+	 
+	 async newPlaylist() {
+		//Nothing to do here
+		return Promise.resolve(true);
+	 }
+	 
+	 async addToPlaylist(item, replace) {
+		//Nothing to do here
+		return Promise.resolve(true);		
+	 }
+	 async removeFromPlaylist(itemidx) {
+		//Nothing to do here
+		return Promise.resolve(true);		
+	 }
+	 async movePlaylistItem(from,to) {
+		//Nothing to do here
+		return Promise.resolve(true);		
+	 }
+	 async getInitialPlaylist() {
+		return Promise.resolve(undefined);
+	 }
+	
+	 createRendererEventSubcription(eventHandler) {
+		this._eventHandler = eventHandler;
+		this.dispatchLastChange({
+			'TransportState': 'NO_MEDIA_PRESENT',
+			'AVTransportURIMetaData': '',
+			'AVTransportURI': '',
+			'CurrentTrack': 'NOT_IMPLEMENTED',			
+			'NumberOfTracks': 'NOT_IMPLEMENTED',
+			'RelativeTimePosition': '00:00:00',
+			'CurrentTrackURI': '',
+			'CurrentTrackMetaData': '',
+			'Volume': 100,
+			'Mute': 'false'			
+		});	
+		return this;
+	 }
+	 
+	 async close() {
+		// for mocking eventsource
+		await this.stop();
+		this._audioElement = undefined;
+	 }
+}
 
 
 

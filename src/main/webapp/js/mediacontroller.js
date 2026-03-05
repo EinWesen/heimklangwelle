@@ -1,4 +1,4 @@
-import { DefaultRemoteRenderer,HeimklangRemoteRenderer } from "./renderer.js";
+import { DefaultRemoteRenderer,HeimklangRemoteRenderer,LocalBrowserRenderer } from "./renderer.js";
 
 export class RelTimeHandler { 
   constructor(timeElement) {
@@ -158,7 +158,7 @@ export class MediaController {
 	this._userstop = false;
 
 	this._relTime = new RelTimeHandler(document.getElementById(options["time-info"]));
-	this._renderer = new DefaultRemoteRenderer();
+	this._renderer = new LocalBrowserRenderer();
 	
 	this._containerElement = document.getElementById(options["player-panel"]);	
 	
@@ -170,7 +170,7 @@ export class MediaController {
 		
 	this._playlistContainerElement = document.getElementById(options["playlist-container"]);
 	
-	this.selectDevice(undefined, undefined);
+	this.selectDevice(this._renderer.deviceUdn, this._renderer.instanceId, 'L');
 	
 	document.getElementById(options["btn-play"]).onclick = (event) => this.play().catch(errorInfo => errorInfo); // Swallow already reported error;;
 	document.getElementById(options["btn-pause"]).onclick = (event) => this.pause().catch(errorInfo => errorInfo); // Swallow already reported error;;
@@ -236,9 +236,11 @@ export class MediaController {
   async selectDevice(udn, instanceId, rendererType) {
 	if (rendererType === 'H') {
 		this._renderer = new HeimklangRemoteRenderer();		
+	} else if (rendererType === 'L') {
+		this._renderer = new LocalBrowserRenderer(); 
 	} else { // 'D'
-		this._renderer = new DefaultRemoteRenderer();		
-	}
+		this._renderer = new DefaultRemoteRenderer();
+	}		
 	
     this._renderer.deviceUdn = udn;
 	this._renderer.instanceId = instanceId;
@@ -309,9 +311,11 @@ export class MediaController {
 							this._relTime.pause();
 						} else if (prevState !== 'PLAYING' && nextState === 'PLAYING') {
 						    this._relTime.start();
+						} else if (prevState !== 'STOPPED' && nextState === 'STOPPED') {
+							this._relTime.stop();
 						}
 						
-						if (eventData['AVTransportURI'] != this._properties['AVTransportURI'] || eventData['CurrentTrackURI'] != this._properties['CurrentTrackURI']	|| eventData['CurrentTrack'] != this._properties['CurrentTrack'] ) {
+						if (('AVTransportURI' in eventData && eventData['AVTransportURI'] != this._properties['AVTransportURI']) || ('CurrentTrackURI' in eventData && eventData['CurrentTrackURI'] != this._properties['CurrentTrackURI'])	|| ('CurrentTrack' in eventData && eventData['CurrentTrack'] != this._properties['CurrentTrack']) ) {
 							this._relTime.restart();
 						}
 						

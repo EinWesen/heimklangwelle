@@ -53,7 +53,7 @@ async function loadDevices() {
 		if (!selectedRenderer) selectedRenderer = '-';
 		if (!selectedServer) selectedServer = '-';
 		
-		selRenderer.innerHTML = '<option value="-">Select MediaRenderer</option>';
+		selRenderer.innerHTML = '<option value="-" data-rytpe="L">Local Renderer</option>';
 		selServer.innerHTML = '<option value="-">Select MediaServer</option>'; 
     	
 		api.listDevices().then((apiResult) => {
@@ -115,12 +115,7 @@ async function init() {
 	};
 	
 	document.getElementById(RENDERER_SELECT_ID).onchange = (event) => {
-		if (event.target.value == '-') {
-			MEDIACONTROLLER.selectDevice(undefined, undefined, "0");			
-		} else {			
-			// TODO: Where to get instanceId ? 
-			MEDIACONTROLLER.selectDevice(event.target.value, "0", event.target.options[event.target.selectedIndex].dataset.rtype);
-		}
+		MEDIACONTROLLER.selectDevice(event.target.value, "0", event.target.options[event.target.selectedIndex].dataset.rtype);
 	};	
 	
 	document.getElementById(ADD_URI_TO_PL_BUTTON).onclick = (event) => {
