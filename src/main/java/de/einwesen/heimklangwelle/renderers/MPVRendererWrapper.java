@@ -33,8 +33,8 @@ import de.einwesen.heimklangwelle.util.RollingSequence;
 
 public class MPVRendererWrapper extends AbstractRendererWrapper {
 	
-	public static final String CONFIG_PROPERTY_MPV_PATH = "CONFIG_PROPERTY_MPV_PATH";
-	public static final String CONFIG_PROPERTY_MPVPIPE_PATH = "CONFIG_PROPERTY_MPVPIPE_PATH";
+	public static final String CONFIG_PROPERTY_MPV_PATH = "HEIMKLANG_CONFIG_MPV_PATH";
+	public static final String CONFIG_PROPERTY_MPVPIPE_PATH = "HEIMKLANG_CONFIG_MPVPIPE_PATH";
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(MPVRendererWrapper.class);
 	private static final String CMD_OBSERVE_PROPERTY = "observe_property";
