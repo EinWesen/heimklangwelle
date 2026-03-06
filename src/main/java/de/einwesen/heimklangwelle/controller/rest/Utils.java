@@ -22,7 +22,10 @@ import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.DIDLContent;
 import org.jupnp.support.model.Res;
 import org.jupnp.support.model.container.Container;
+import org.jupnp.support.model.item.AudioItem;
+import org.jupnp.support.model.item.ImageItem;
 import org.jupnp.support.model.item.Item;
+import org.jupnp.support.model.item.VideoItem;
 import org.jupnp.xml.ParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -195,34 +198,75 @@ public class Utils {
 	private static void appendItemsToArray(final JSONArray jsonChildren, final List<Item> items, final DIDLParser didlParser) throws ParserException {
 		
 		for (Item item : items) {
-			final JSONObject jsonChild = new JSONObject();
-			jsonChild.put("id", item.getId());
-			jsonChild.put("parentId", item.getParentID());
-			jsonChild.put("title", item.getTitle());
+			final List<Res> itemResources = filterMatchingRes(item);
 			
-			if (item.getResources().size() == 1) {					
-				final Res res = item.getResources().get(0);
-				jsonChild.put("uri", res.getValue());
-				jsonChild.put("mimeType", res.getProtocolInfo().getContentFormatMimeType().getType());
+			if (itemResources.size() > 0) {
 				
-				final DIDLContent content =  new DIDLContent();
-				content.addItem(item);		
+				final JSONObject jsonChild = new JSONObject();
+				jsonChild.put("id", item.getId());
+				jsonChild.put("parentId", item.getParentID());
+				jsonChild.put("title", item.getTitle());
 				
-				String uriMetaData;
-				try {
-					uriMetaData = didlParser.generate(content);
-				} catch (Exception e) {
-					throw new ParserException("Error generating metaData", e);
+				if (itemResources.size() == 1) {					
+					final Res res = item.getResources().get(0);
+					jsonChild.put("uri", res.getValue());
+					jsonChild.put("mimeType", res.getProtocolInfo().getContentFormatMimeType().getType());
+					
+					final DIDLContent content =  new DIDLContent();
+					content.addItem(item);		
+					
+					String uriMetaData;
+					try {
+						uriMetaData = didlParser.generate(content);
+					} catch (Exception e) {
+						throw new ParserException("Error generating metaData", e);
+					}
+					
+					jsonChild.put("uriMetaData", uriMetaData);
+				
+				} else if (itemResources.size() > 1) {
+					throw new IllegalStateException("Items with multiple resources for its type are not supported right now");
 				}
 				
-				jsonChild.put("uriMetaData", uriMetaData);
-			} else if (item.getResources().size() > 1) {
-				throw new IllegalStateException("Items with multipole resources are not supported right now");
-			} 
-			jsonChild.put("isContainer", false);
-			jsonChildren.put(jsonChild);
+				jsonChild.put("isContainer", false);
+				jsonChildren.put(jsonChild);
+			
+			} else {
+				LOGGER.warn("Bug? No suitable resources found on item " + item.getId());
+			}			
+			
 		}
 		
+	}
+	
+	private static List<Res> filterMatchingRes(Item item) {
+		if (item.getResources().size() == 1) {
+			return item.getResources();
+		} else {
+			
+			final String itemClazz = item.getClazz().getValue();
+			
+			if (itemClazz.startsWith(AudioItem.CLASS.getValue())) {
+				return filterResByContentType(item, "audio/");
+			} else if (itemClazz.startsWith(VideoItem.CLASS.getValue())) {
+				return filterResByContentType(item, "video/");
+			} else if (itemClazz.startsWith(ImageItem.CLASS.getValue())) {
+				return filterResByContentType(item, "image/");
+			} else {
+				return item.getResources();
+			}
+			
+		}
+
+	}
+	
+	private static List<Res> filterResByContentType(Item item, String type) {
+		try {
+			return item.getResources().stream().filter(res -> res.getProtocolInfo().getContentFormat().startsWith(type)).toList();
+		} catch (Throwable e) {
+			LOGGER.warn("Error filtering resources: " + item.getId(), e);
+			return item.getResources();
+		}
 	}
 
 }
