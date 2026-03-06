@@ -435,6 +435,7 @@ export class MediaController {
   }
 
   async stop() {
+	this._userstop = true;
 	return this._renderer.stop().catch(errInfo => this._triggerActionError('Action failed: ' + errInfo.summary));
   }
 
