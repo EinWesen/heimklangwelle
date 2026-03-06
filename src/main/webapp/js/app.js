@@ -54,7 +54,7 @@ async function loadDevices() {
 		if (!selectedRenderer) selectedRenderer = '-';
 		if (!selectedServer) selectedServer = '-';
 		
-		selRenderer.innerHTML = '<option value="-" data-rytpe="L">Local Renderer</option>';
+		selRenderer.innerHTML = '<option value="-" data-rtype="L">Local Renderer</option>';
 		selServer.innerHTML = '<option value="-">Select MediaServer</option>'; 
     	
 		api.listDevices().then((apiResult) => {
