@@ -448,6 +448,7 @@ export class LocalBrowserRenderer {
 	 async close() {
 		// for mocking eventsource
 		await this.stop();
+		this._eventHandler = undefined;
 		this._audioElement = undefined;
 	 }
 }
