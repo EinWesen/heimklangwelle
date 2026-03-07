@@ -649,7 +649,14 @@ export class MediaController {
   }
   
   async playEntry(entryObject) {
-	return this._renderer.playEntry(entryObject).catch((errInfo) => {
+	this._userstop = true; // PlayEntry may need to stop the player first
+	return this._renderer.playEntry(entryObject, this._properties['TransportState'])
+	.then(apiResponse => {
+		// if we got here, a stop may or may not have happend. In any case the next stop is not a user stop
+		this._userstop = false;
+		return apiResponse;
+	})
+	.catch((errInfo) => {
 		this._triggerActionError('Action failed: ' + errInfo.summary).catch(AlreadyReportedError => undefined);
 	});
   } 

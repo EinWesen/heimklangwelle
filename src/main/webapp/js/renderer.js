@@ -97,7 +97,13 @@ export class DefaultRemoteRenderer {
 		});		
 	 }  
 	 
-	 async playEntry({itemindex, item}) {
+	 // TODO: It's bad design, that the renderer does not know its own state
+	 // But i don't feel like refactoring everything right now, just to know 
+	 // when to stop first  
+	 async playEntry({itemindex, item}, currentTransportState) {
+		if (currentTransportState == 'PLAYING' || currentTransportState == 'PAUSED_PLAYBACK') {			
+			await this.stop();								
+		}
 		return this.setAVTransportItem(item).then((apiResult) => {
 			return this.play();	
 		});			
@@ -161,7 +167,7 @@ export class HeimklangRemoteRenderer extends DefaultRemoteRenderer {
 		});  		
 	}
 
-	async playEntry({itemindex, item}) {
+	async playEntry({itemindex, item}, currentTransportState) {
 		await this._tryExecuteServiceCall({
 		   "serviceId": "AVTransport",
 		   "action": "Seek",
@@ -395,7 +401,7 @@ export class LocalBrowserRenderer {
 		return Promise.resolve({response: undefined, data: ''});	
 	 }  
 	 
-	 async playEntry({itemindex, item}) {
+	 async playEntry({itemindex, item}, currentTransportState) {
 		return this.setAVTransportItem(item).then((apiResult) => {
 			return this.play();	
 		});
