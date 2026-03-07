@@ -618,6 +618,15 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 					this.currentPlaylistMetaData.add(nextURIMetaData);
 					try {
 						sendCommandElseThrowTransportException(new Object[]{"loadfile", nextURI, "append"}, AVTransportErrorCode.READ_ERROR);
+						
+						try {
+							if (this.currentPlaylistMetaData.size() == 1) {
+								this.seekTrack(1);
+							}
+						} catch (Throwable t) {
+							LOGGER.warn("could not seek to first track in list", t);
+						}
+						
 					} catch (AVTransportException e) {
 						this.currentPlaylistMetaData.remove(this.currentPlaylistMetaData.size()-1);
 						throw e;

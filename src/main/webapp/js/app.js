@@ -100,7 +100,7 @@ async function init() {
 	
 	CONTENTBROWSER.addEventListener(ContentServerBrowser.EVENT_NAME_DBLCLICKITEM, async (event) => {
 		const playlistindex = (await MEDIACONTROLLER.addToPlaylist(event.detail.item, event.detail.play));
-		if (playlistindex === 0 && !MEDIACONTROLLER.isPlaying()) {
+		if (playlistindex === 0 && (event.detail.play || !MEDIACONTROLLER.isPlaying())) {
 			MEDIACONTROLLER.playEntry({itemindex: playlistindex, item: event.detail.item}).catch((errorInfo) => {
 				// Error is already reported internally
 				console.error(errorInfo);

@@ -512,7 +512,10 @@ export class MediaController {
 	}
 		
 	try {
-		await this._renderer.addToPlaylist(item, replace);		
+		await this._renderer.addToPlaylist(item, replace);
+		if (replace) {
+			this._emptyLocalPlaylist();
+		}					
 		const index = this._playlist.push(item) - 1;
 		this._playlistContainerElement.appendChild(createPlaylistLi(item, index));
 		return index;		
