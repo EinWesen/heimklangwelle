@@ -485,7 +485,7 @@ export class MediaController {
   
   _updateLocalPlaylistItems(plData) {
 	if (plData != undefined) {
-				
+		this._playlist = plData;
 		for (let i=0; i < plData.length; i++) {
 			this._playlistContainerElement.appendChild(createPlaylistLi(plData[i], i));
 		}
