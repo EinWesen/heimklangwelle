@@ -43,12 +43,12 @@ export class RelTimeHandler {
   _clearTimer() {
 	if (this._relTimeTimer) {
 		clearInterval(this._relTimeTimer);
+		this._relTimeTimer = undefined;
 	}		
   }
   
   reset() {
 	this._clearTimer();
-	this._relTimeTimer = undefined;	
 	this.restart();
 	return this;
   }
@@ -63,6 +63,15 @@ export class RelTimeHandler {
   }
 
   start() {
+
+	// FIXME: We don't detect restarts of the track sometimes
+	// so the previous timer is not stopped	
+	if (this._relTimeTimer != undefined) {
+		// just to be sure, in cat relTime is not suppted by renderer
+		this.setSeconds(0); 
+		return this;
+	}
+	
 	const self = this;
 	this._relTimeTimer = setInterval(() => {
 		self.setSeconds(this._relTime + 1);
