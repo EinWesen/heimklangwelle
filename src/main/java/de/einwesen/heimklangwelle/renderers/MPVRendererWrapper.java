@@ -19,9 +19,7 @@ import org.jupnp.model.action.ActionException;
 import org.jupnp.model.types.ErrorCode;
 import org.jupnp.support.avtransport.AVTransportErrorCode;
 import org.jupnp.support.avtransport.AVTransportException;
-import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.Channel;
-import org.jupnp.support.model.DIDLContent;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.renderingcontrol.RenderingControlException;
 import org.slf4j.Logger;
@@ -210,7 +208,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 
     public boolean sendCommand(Object[] cmd) {
     	try {
-			final JSONObject result = fetchCommandResult(cmd).get(5, TimeUnit.SECONDS);
+			final JSONObject result = fetchCommandResult(cmd).get(10, TimeUnit.SECONDS);
 			return Boolean.valueOf("success".equals(result.optString("error", "")));
 		} catch (TimeoutException e) {
 			LOGGER.error("Waited too long for response",e);
@@ -293,10 +291,10 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 					this.playerState = TransportState.STOPPED;
 					this.firePlayerStateChangedEvent();
 					
-					// We want to keep the playlist, so lets just readd everything
-					if (DATAURI_DYNAMIC_PLAYLIST.equals(this.currentTransportURI) && this.isPlaylistWriteable) {
-						this.addAVTransportURIsFromMetaData();
-					}
+//					// We want to keep the playlist, so lets just readd everything
+//					if (DATAURI_DYNAMIC_PLAYLIST.equals(this.currentTransportURI) && this.isPlaylistWriteable) {
+//						this.addAVTransportURIsFromMetaData();
+//					}
 					
 				}
 				break;
@@ -527,6 +525,11 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 			if(this.playlistSize == 0) {
 				throw new AVTransportException(AVTransportErrorCode.NO_CONTENTS);
 			}
+			
+			if (this.currentTrack == 0 && this.playlistSize > 0) {
+				this.seekTrack(1);
+			}
+			
 		} else {
 
 			if (this.playerState != TransportState.PAUSED_PLAYBACK) {				
@@ -645,34 +648,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	@Override
 	public List<String> getTrackURIsMetaData() throws ActionException {
 		return new ArrayList<>(this.currentPlaylistMetaData);
-	}
-	
-	private void addAVTransportURIsFromMetaData() {
-		
-		final MPVRendererWrapper self = this;
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				final DIDLParser parser = new DIDLParser(); 
-				
-				try {
-					for (String metaData : self.currentPlaylistMetaData) {
-						final DIDLContent content = parser.parse(metaData);
-						final String url = content.getItems().get(0).getResources().get(0).getValue();
-						sendCommandElseThrowTransportException(new Object[]{"loadfile", url, "append"}, AVTransportErrorCode.READ_ERROR);
-					}
-				} catch (Exception e) {
-					LOGGER.warn("Internal error", e);
-					try {
-						self.setCurrentContent("", "");
-					} catch (AVTransportException e1) {
-						LOGGER.warn("Internal error", e1);
-					}
-					self.setPlayerStateAndFire(TransportState.NO_MEDIA_PRESENT);
-				}
-			}
-		}).start();
-	}
+	}	
 		
 	@Override
 	public void removeTrackAtIndex(long index) throws ActionException {
