@@ -40,7 +40,7 @@ Is this best way to solve that problem? - Of course not! There are so many easie
 - ✓ Support for Play,Stop,Mute,SetVolume,Next,Previous
 - ✓ Supports a playlist queue with NextMedia/PreviousMedia and auto advance
 - ✓ Supports remote playlist queue as a custom/vendor function in conjunction with own renderer (Controller does not need to stay open)
-- ✓ Displays track title (if renderer sends metadata)
+- ✓ Displays track artist & title (if metadata is available)
 - ✓ Displays played time (synced by "RelativeTimePosition", if available
 - ✗ No full metadata support (apart from the mentioned above)
 - ✗ No support for setNextTRansportURI / gapless playback

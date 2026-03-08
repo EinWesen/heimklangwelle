@@ -21,6 +21,8 @@ import org.jupnp.model.meta.Service;
 import org.jupnp.support.contentdirectory.DIDLParser;
 import org.jupnp.support.model.DIDLContent;
 import org.jupnp.support.model.Res;
+import org.jupnp.support.model.DIDLObject.Property;
+import org.jupnp.support.model.PersonWithRole;
 import org.jupnp.support.model.container.Container;
 import org.jupnp.support.model.item.AudioItem;
 import org.jupnp.support.model.item.ImageItem;
@@ -206,6 +208,26 @@ public class Utils {
 				jsonChild.put("id", item.getId());
 				jsonChild.put("parentId", item.getParentID());
 				jsonChild.put("title", item.getTitle());
+				
+				// When browsing a server by directory some servers provide the filename in the title
+				// but also still send metadata for artist. This would lead to display "artist - artist - title"  
+				// lets try to clean the most common structure here
+				String artist = null;
+				
+				final PersonWithRole person = item.getFirstPropertyValue(Property.UPNP.ARTIST.class);
+				if (person != null) {
+					artist = person.getName();
+				}
+				
+				if (artist == null) {
+					artist = item.getCreator();
+				}
+				
+				if (artist != null && artist.length() > 0) {
+					if (item.getTitle() != null && !item.getTitle().toLowerCase().startsWith(artist.toLowerCase() + " - ")) {
+						jsonChild.put("title", artist + " - " + item.getTitle());
+					}
+				}
 				
 				if (itemResources.size() == 1) {					
 					final Res res = item.getResources().get(0);

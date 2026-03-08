@@ -108,9 +108,28 @@ function tryParseTitleFromDidl(metaData) {
 		if (errorNode) {
 		  console.error(errorNode, metaData);
 		} else {
+		  
+		  const artists = xmlDoc.getElementsByTagName("upnp:artist");
+		  let artist = (artists && artists.length == 1) ? artists[0].textContent : undefined;
+		  
+		  if (!artist) {
+			const creators = xmlDoc.getElementsByTagName("dc:creator");
+			artist = (creators && creators.length == 1) ? creators[0].textContent : undefined;
+		  }
+			
 	      const titles = xmlDoc.getElementsByTagName("dc:title");
 		  if (titles) {
 			if (titles.length == 1) {
+				if (artist) {
+					
+					// When browsing a server by directory some servers provide the filename in the title
+					// but also still send metadata for artist. This would lead to display "artist - artist - title"  
+					// lets try to clean the most common structure here
+					if (!titles[0].textContent.toLowerCase().startsWith(artist.toLowerCase() + " - ")) {
+						return artist + " - " + titles[0].textContent; 
+					} 
+					  
+				}
 				return titles[0].textContent;				
 			}
 		  }
@@ -141,6 +160,8 @@ function createPlaylistLi(item, index) {
 	
 	span1.textContent = fileicon;
 	span2.classList.add('title');
+	
+	
 	span2.textContent = item.title;
 	span3.classList.add('remove');
 	span3.innerHTML = '&#9167;';
@@ -485,7 +506,7 @@ export class MediaController {
   
   _updateLocalPlaylistItems(plData) {
 	if (plData != undefined) {
-		this._playlist = plData;
+		this._playlist = plData;		
 		for (let i=0; i < plData.length; i++) {
 			this._playlistContainerElement.appendChild(createPlaylistLi(plData[i], i));
 		}
