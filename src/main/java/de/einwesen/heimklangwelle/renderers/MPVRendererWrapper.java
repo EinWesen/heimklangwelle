@@ -147,6 +147,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
         
         this.version = initVesionString();
         this.ready = true;
+        LOGGER.info(this.version + " ready");
     }
     
 	private String initVesionString() {
@@ -362,11 +363,16 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 					default:
 				}
 				break;
+			case FILE_LOADED:
+				if (this.playerState == TransportState.TRANSITIONING) {
+					this.setPlayerStateAndFire(TransportState.STOPPED);
+				}
+				break;
 			case UNKNOWN_EVENT:
 				if (event.has("error")) {					
 					handleCommandResult(event);					
 				}
-			case FILE_LOADED:
+				break;
 			case AUDIO_RECONFIG:
 			default:
     	}
@@ -561,7 +567,7 @@ public class MPVRendererWrapper extends AbstractRendererWrapper {
 	
 	@Override
 	public void seekTrack(long trackNo) throws AVTransportException {
-		sendCommandElseThrowTransportException(new Object[]{"playlist-play-index", trackNo-1}, AVTransportErrorCode.ILLEGAL_SEEK_TARGET);		
+		sendCommandElseThrowTransportException(new Object[]{"playlist-play-index", trackNo-1}, AVTransportErrorCode.ILLEGAL_SEEK_TARGET);
 	}	
 	
 	@Override
